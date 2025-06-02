@@ -3,6 +3,10 @@
 #include <time.h>
 #include <string.h>
 
+#ifdef _WIN32
+    #include <windows.h>
+#endif
+
 /* --- KOLORY --- */
 #define KOLOR_RESET   "\033[0m"
 #define KOLOR_CYAN    "\033[1;36m"
@@ -12,6 +16,10 @@
 #define KOLOR_RED     "\033[1;31m"
 #define KOLOR_BOLD    "\033[1m"
 #define KOLOR_WHITE   "\033[1;37m"
+#define KOLOR_SZARY    "\033[1;30m"
+#define KOLOR_NIEBIESKI "\033[1;34m"
+#define KOLOR_ROZOWY   "\033[1;95m"
+#define KOLOR_JASNOZIELONY "\033[1;92m"
 
 /* --- STALE WYMIARY OKNA --- */
 #define OKNO_WYSOKOSC 40
@@ -162,6 +170,15 @@ typedef struct {
     int liczba_wrogow;  // Liczba wrogów, z którymi gracz walczył
 } Postac;
 
+const char* kolory_rzadkosci[] = {
+    KOLOR_SZARY,         // Zniszczony
+    KOLOR_WHITE,         // Zwykly
+    KOLOR_NIEBIESKI,     // Slabej jakosci
+    KOLOR_JASNOZIELONY,  // Dobrej jakosci
+    KOLOR_ROZOWY,        // Mistrzowski
+    KOLOR_BOLD KOLOR_YELLOW // LEGENDARNY
+};
+
 /* --- BFS --- */
 typedef struct {
     int x;
@@ -265,11 +282,23 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
     else if (roll > 30) item.rzadkosc = RZAD_ZWYKLY;
     else item.rzadkosc = RZAD_ZNISZCZONY;
 
+    // --- MNOŻNIKI RZADKOŚCI ---
+    float mnoznik = 1.0f;
+    switch (item.rzadkosc) {
+        case RZAD_ZNISZCZONY: mnoznik = 0.5f; break; // -50%
+        case RZAD_ZWYKLY:     mnoznik = 1.0f; break; // 100%
+        case RZAD_SLABY:      mnoznik = 0.8f; break; // 80%
+        case RZAD_DOBRY:      mnoznik = 1.2f + szczescie * 0.01f; break; // 120% + szczęście
+        case RZAD_MISTRZ:     mnoznik = 1.5f + szczescie * 0.01f; break; // 150% + szczęście
+        case RZAD_LEG:        mnoznik = 2.5f + szczescie * 0.02f; break; // 250% + szczęście
+        default:              mnoznik = 1.0f;
+    }
+
     item.leczenie = 0;
     item.typ_leczenia = LECZENIE_ZWYKLE;
     item.typ_amuletu = AMULET_SZCZESCIA;
 
-    // --- Bron, Tarcza, Zbroja ---
+    // --- Bron, Tarcza, Zbroja, Leczenie, Amulet ---
     if (typ == 0) { // Bron
         item.typ = PRZEDMIOT_BRON;
         if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNY Miecz");
@@ -278,13 +307,13 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaby Miecz");
         else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Miecz");
         else snprintf(item.nazwa, 50, "Zniszczony Miecz");
-        item.bonus_obrazen = 2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2);
+        item.bonus_obrazen = (int)((2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2)) * mnoznik);
         item.bonus_odpornosci = 0;
-        item.bonus_HP = item.rzadkosc * 2 + rand() % (2 + item.rzadkosc);
-        item.bonus_sila = item.rzadkosc + rand() % (1 + item.rzadkosc);
-        item.bonus_szybkosc = 0.1f * item.rzadkosc;
+        item.bonus_HP = (int)((item.rzadkosc * 2 + rand() % (2 + item.rzadkosc)) * mnoznik);
+        item.bonus_sila = (int)((item.rzadkosc + rand() % (1 + item.rzadkosc)) * mnoznik);
+        item.bonus_szybkosc = 0.1f * item.rzadkosc * mnoznik;
         item.waga = 3 + item.rzadkosc;
-        item.cena = 10 + item.rzadkosc * 30 + poziom * 2;
+        item.cena = (int)((10 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
     } else if (typ == 1) { // Tarcza
         item.typ = PRZEDMIOT_TARCZA;
         if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Tarcza");
@@ -293,13 +322,13 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaba Tarcza");
         else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Tarcza");
         else snprintf(item.nazwa, 50, "Zniszczona Tarcza");
-        item.bonus_odpornosci = 2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2);
+        item.bonus_odpornosci = (int)((2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2)) * mnoznik);
         item.bonus_obrazen = 0;
-        item.bonus_HP = item.rzadkosc * 3 + rand() % (2 + item.rzadkosc);
+        item.bonus_HP = (int)((item.rzadkosc * 3 + rand() % (2 + item.rzadkosc)) * mnoznik);
         item.bonus_sila = 0;
-        item.bonus_szybkosc = -0.05f * item.rzadkosc;
+        item.bonus_szybkosc = -0.05f * item.rzadkosc * mnoznik;
         item.waga = 4 + item.rzadkosc;
-        item.cena = 12 + item.rzadkosc * 30 + poziom * 2;
+        item.cena = (int)((12 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
     } else if (typ == 2) { // Zbroja
         item.typ = PRZEDMIOT_ZBROJA;
         if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Zbroja");
@@ -308,28 +337,28 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaba Zbroja");
         else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Zbroja");
         else snprintf(item.nazwa, 50, "Zniszczona Zbroja");
-        item.bonus_odpornosci = 3 + poziom + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2);
+        item.bonus_odpornosci = (int)((3 + poziom + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2)) * mnoznik);
         item.bonus_obrazen = 0;
-        item.bonus_HP = 5 + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2);
+        item.bonus_HP = (int)((5 + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2)) * mnoznik);
         item.bonus_sila = 0;
-        item.bonus_szybkosc = -0.1f * item.rzadkosc;
+        item.bonus_szybkosc = -0.1f * item.rzadkosc * mnoznik;
         item.waga = 5 + item.rzadkosc;
-        item.cena = 15 + item.rzadkosc * 40 + poziom * 2;
+        item.cena = (int)((15 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
     } else if (typ == 3) { // Leczenie
         item.typ = PRZEDMIOT_LECZENIE;
         int rodzaj = rand() % 3;
         if (rodzaj == 0) {
             item.typ_leczenia = LECZENIE_ZWYKLE;
             snprintf(item.nazwa, 50, "Zwykla Mikstura Leczenia");
-            item.leczenie = 25 + poziom * 2 + item.rzadkosc * 5;
+            item.leczenie = (int)((25 + poziom * 2 + item.rzadkosc * 5) * mnoznik);
         } else if (rodzaj == 1) {
             item.typ_leczenia = LECZENIE_HEALER;
             snprintf(item.nazwa, 50, "Mikstura Leczenia Healer'a");
-            item.leczenie = 40 + poziom * 3 + item.rzadkosc * 8;
+            item.leczenie = (int)((40 + poziom * 3 + item.rzadkosc * 8) * mnoznik);
         } else {
             item.typ_leczenia = LECZENIE_MAG;
             snprintf(item.nazwa, 50, "Mikstura Leczenia Maga");
-            item.leczenie = 60 + poziom * 4 + item.rzadkosc * 12;
+            item.leczenie = (int)((60 + poziom * 4 + item.rzadkosc * 12) * mnoznik);
         }
         item.bonus_obrazen = 0;
         item.bonus_odpornosci = 0;
@@ -337,33 +366,33 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         item.bonus_sila = 0;
         item.bonus_szybkosc = 0.0f;
         item.waga = 1;
-        item.cena = 10 + item.rzadkosc * 10 + poziom * 2;
+        item.cena = (int)((10 + item.rzadkosc * 10 + poziom * 2) * mnoznik);
     } else { // Amulety
         item.typ = PRZEDMIOT_INNY;
         int rodzaj = rand() % 4;
         if (rodzaj == 0) {
             item.typ_amuletu = AMULET_SZCZESCIA;
             snprintf(item.nazwa, 50, "Amulet Szczescia");
-            item.bonus_HP = 2 + item.rzadkosc;
+            item.bonus_HP = (int)((2 + item.rzadkosc) * mnoznik);
         } else if (rodzaj == 1) {
             item.typ_amuletu = AMULET_REGENERACJI;
             snprintf(item.nazwa, 50, "Amulet Regeneracji");
-            item.bonus_HP = 5 + item.rzadkosc * 2;
+            item.bonus_HP = (int)((5 + item.rzadkosc * 2) * mnoznik);
         } else if (rodzaj == 2) {
             item.typ_amuletu = AMULET_MISTRZA;
             snprintf(item.nazwa, 50, "Amulet Mistrza");
-            item.bonus_HP = 10 + item.rzadkosc * 3;
+            item.bonus_HP = (int)((10 + item.rzadkosc * 3) * mnoznik);
         } else {
             item.typ_amuletu = AMULET_LEGENDARNY;
             snprintf(item.nazwa, 50, "LEGENDARNY Amulet");
-            item.bonus_HP = 20 + item.rzadkosc * 5;
+            item.bonus_HP = (int)((20 + item.rzadkosc * 5) * mnoznik);
         }
         item.bonus_obrazen = 0;
         item.bonus_odpornosci = 0;
         item.bonus_sila = 0;
         item.bonus_szybkosc = 0.0f;
         item.waga = 0;
-        item.cena = 50 + item.rzadkosc * 40 + poziom * 2;
+        item.cena = (int)((50 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
         item.leczenie = 0;
     }
     return item;
@@ -505,44 +534,37 @@ void przegladaj_plecak(Plecak *plecak, Postac *gracz) {
         printf(KOLOR_BOLD KOLOR_CYAN "\n=== PLECAK (waga: %d/%d) ===\n" KOLOR_RESET, plecak->zajete_miejsce, plecak->max_miejsce);
         if (plecak->count == 0) {
             printf("Plecak jest pusty.\n");
-            printf("\nWcisnij ENTER aby wyjsc z ekwipunku...");
-            char linia[32];
-            fgets(linia, sizeof(linia), stdin);
-            return;
-        }
-        for (int i = 0; i < plecak->count; i++) {
-            Przedmiot *item = &plecak->items[i];
-            if (item->rzadkosc == RZAD_LEG)
-                printf(KOLOR_BOLD KOLOR_YELLOW);
-            else if (item->typ == PRZEDMIOT_LECZENIE)
-                printf(KOLOR_GREEN);
-            printf("%d: %s (%s", i, item->nazwa,
-                item->rzadkosc == RZAD_LEG ? "LEGENDARNY, " : "");
-            switch (item->typ) {
-                case PRZEDMIOT_BRON: printf("Bron"); break;
-                case PRZEDMIOT_TARCZA: printf("Tarcza"); break;
-                case PRZEDMIOT_ZBROJA: printf("Zbroja"); break;
-                case PRZEDMIOT_LECZENIE: printf("Leczenie"); break;
-                case PRZEDMIOT_INNY: printf("Amulet"); break;
-                default: printf("Inny");
+        } else {
+            for (int i = 0; i < plecak->count; i++) {
+                Przedmiot *item = &plecak->items[i];
+                printf("%s", kolory_rzadkosci[item->rzadkosc]);
+                printf("%d: %s (%s", i, item->nazwa,
+                    item->rzadkosc == RZAD_LEG ? "LEGENDARNY, " : "");
+                switch (item->typ) {
+                    case PRZEDMIOT_BRON: printf("Bron"); break;
+                    case PRZEDMIOT_TARCZA: printf("Tarcza"); break;
+                    case PRZEDMIOT_ZBROJA: printf("Zbroja"); break;
+                    case PRZEDMIOT_LECZENIE: printf("Leczenie"); break;
+                    case PRZEDMIOT_INNY: printf("Amulet"); break;
+                    default: printf("Inny");
+                }
+                printf(", waga: %d, cena: %d", item->waga, item->cena);
+                if (item->bonus_obrazen) printf(", obrazenia: %d", item->bonus_obrazen);
+                if (item->bonus_odpornosci) printf(", odpornosc: %d", item->bonus_odpornosci);
+                if (item->bonus_HP) printf(", HP: %d", item->bonus_HP);
+                if (item->bonus_sila) printf(", sila: %d", item->bonus_sila);
+                if (item->bonus_szybkosc) printf(", szybkosc: %.2f", item->bonus_szybkosc);
+                if (item->typ == PRZEDMIOT_LECZENIE) printf(", leczenie: %d", item->leczenie);
+                if (item->typ == PRZEDMIOT_INNY) {
+                    if (item->rzadkosc == RZAD_LEG)
+                        printf(KOLOR_MAGENTA " | Amulet Regeneracji: +10 HP, po walce leczy 10HP, po pulapce 5HP" KOLOR_RESET);
+                    else
+                        printf(KOLOR_MAGENTA " | Amulet: +5 HP, nie zajmuje miejsca w plecaku" KOLOR_RESET);
+                }
+                printf(")" KOLOR_RESET "\n");
             }
-            printf(", waga: %d, cena: %d", item->waga, item->cena);
-            if (item->bonus_obrazen) printf(", obrazenia: %d", item->bonus_obrazen);
-            if (item->bonus_odpornosci) printf(", odpornosc: %d", item->bonus_odpornosci);
-            if (item->bonus_HP) printf(", HP: %d", item->bonus_HP);
-            if (item->bonus_sila) printf(", sila: %d", item->bonus_sila);
-            if (item->bonus_szybkosc) printf(", szybkosc: %.2f", item->bonus_szybkosc);
-            if (item->typ == PRZEDMIOT_LECZENIE) printf(", leczenie: %d", item->leczenie);
-            // Dodaj opis amuletu
-            if (item->typ == PRZEDMIOT_INNY) {
-                if (item->rzadkosc == RZAD_LEG)
-                    printf(KOLOR_MAGENTA " | Amulet Regeneracji: +10 HP, po walce leczy 10HP, po pulapce 5HP" KOLOR_RESET);
-                else
-                    printf(KOLOR_MAGENTA " | Amulet: +5 HP, nie zajmuje miejsca w plecaku" KOLOR_RESET);
-            }
-            printf(")" KOLOR_RESET "\n");
         }
-        printf("Wybierz nr przedmiotu do wyposazenia/uzycia (q aby wyjsc, L <nr> aby uzyc leczenie, W <nr> aby wyrzucic): ");
+        printf("\nWybierz nr przedmiotu do wyposazenia/uzycia (q aby wyjsc, L <nr> aby uzyc leczenie, W <nr> aby wyrzucic, Z <slot> aby zdjac przedmiot ze slotu): "); //aby zjadc przedmiot to np Z 0 (od 0 do 2)
         char linia[32];
         fgets(linia, sizeof(linia), stdin);
         int wybor;
@@ -553,6 +575,23 @@ void przegladaj_plecak(Plecak *plecak, Postac *gracz) {
             if (wybor >= 0 && wybor < plecak->count) {
                 printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
                 usun_z_plecaka(plecak, wybor);
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+            }
+        } else if (sscanf(linia, "Z %d", &wybor) == 1) {
+            // Zdejmowanie przedmiotu ze slotu (0-Bron, 1-Tarcza, 2-Zbroja)
+            if (wybor >= 0 && wybor < SLOT_ILOSC && gracz->sloty[wybor]) {
+                if (plecak->zajete_miejsce + gracz->sloty[wybor]->waga > plecak->max_miejsce) {
+                    printf(KOLOR_RED "Brak miejsca w plecaku na zdjęcie przedmiotu!\n" KOLOR_RESET);
+                } else {
+                    usun_bonusy(gracz, gracz->sloty[wybor]);
+                    if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
+                    plecak->items[plecak->count++] = *(gracz->sloty[wybor]);
+                    plecak->zajete_miejsce += gracz->sloty[wybor]->waga;
+                    printf(KOLOR_YELLOW "Zdejmujesz '%s' i chowasz do plecaka.\n" KOLOR_RESET, gracz->sloty[wybor]->nazwa);
+                    free(gracz->sloty[wybor]);
+                    gracz->sloty[wybor] = NULL;
+                }
                 printf("Wcisnij ENTER aby kontynuowac...");
                 fgets(linia, sizeof(linia), stdin);
             }
@@ -1094,6 +1133,9 @@ void pokaz_podsumowanie(Postac* gracz) {
 
 /* --- MAIN --- */
 int main() {
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);    // Ustawia UTF-8 w Windowsowej konsoli
+    #endif
     Mapa mapa;
     TypLokacji typ_lokacji;
     srand((unsigned int)time(NULL));
@@ -1195,8 +1237,10 @@ int main() {
             printf("Wcisnij ENTER aby kontynuowac...");
             getchar(); getchar();
         } else if (aktualna == PULAPKA) {
-            printf(KOLOR_RED "Wpadles w pulapke! Tracisz 10 HP i zyskujesz 1 szczescia.\n" KOLOR_RESET);
-            gracz.HP -= 10;
+            int dmg = 3 + gracz.poziom - (gracz.szczescie / 3); // np. 3 + poziom - szczęście/3
+            if (dmg < 2) dmg = 2;
+            printf(KOLOR_RED "Wpadles w pulapke! Tracisz %d HP i zyskujesz 1 szczescia.\n" KOLOR_RESET, dmg);
+            gracz.HP -= dmg;
             gracz.szczescie += 1;
             gracz.liczba_pulapek++;
             if (gracz_ma_legendarny_amulet(&plecak)) {
