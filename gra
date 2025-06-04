@@ -7,7 +7,6 @@
     #include <windows.h>
 #endif
 
-/* --- KOLORY --- */
 #define KOLOR_RESET   "\033[0m"
 #define KOLOR_CYAN    "\033[1;36m"
 #define KOLOR_YELLOW  "\033[1;33m"
@@ -21,11 +20,9 @@
 #define KOLOR_ROZOWY   "\033[1;95m"
 #define KOLOR_JASNOZIELONY "\033[1;92m"
 
-/* --- STALE WYMIARY OKNA --- */
 #define OKNO_WYSOKOSC 40
 #define OKNO_SZEROKOSC 120
 
-/* --- RPG --- */
 #define PLECAK_MAX_POJEMNOSC 30
 #define MAX_WYSOKOSC 15
 #define MAX_SZEROKOSC 30
@@ -41,7 +38,6 @@
 
 #define LIMIT_LECZENIA 10
 
-/* --- TYPY LOKACJI --- */
 typedef enum {
     LOKACJA_LAS,
     LOKACJA_WIOSKA,
@@ -60,7 +56,6 @@ const char* nazwy_lokacji[] = {
     "Ruiny"
 };
 
-/* --- MAPA --- */
 typedef enum {
     PUSTE, SCIANA, SKARB, PULAPKA, PRZECIWNIK, BRAMA, SKARB_SPEC
 } TypKomorki;
@@ -76,7 +71,6 @@ typedef struct {
     int czy_jest_kupiec;
 } Mapa;
 
-/* --- PRZEDMIOTY --- */
 typedef enum {
     PRZEDMIOT_BRON,
     PRZEDMIOT_TARCZA,
@@ -93,6 +87,28 @@ typedef enum {
     RZAD_MISTRZ,
     RZAD_LEG
 } RzadkoscPrzedmiotu;
+
+typedef enum {
+    QUEST_BRAK,
+    QUEST_ZABIJ_WROGOW,
+    QUEST_WEJDZ_PULAPKI
+} TypQuestu;
+
+typedef struct {
+    TypQuestu typ;
+    int wymagane;
+    int postep;
+    int aktywny;
+    int do_odebrania;
+    int start_wrogow;
+    int start_pulapek;
+} Quest;
+
+typedef struct {
+    int x;
+    int y;
+    int aktywny;
+} NPCQuest;
 
 const char* nazwy_rzadkosci[] = {
     "Zniszczony",
@@ -132,7 +148,6 @@ typedef struct {
     TypAmuletu typ_amuletu;
 } Przedmiot;
 
-/* --- PLECAK --- */
 typedef struct {
     Przedmiot *items;
     int count;
@@ -141,7 +156,6 @@ typedef struct {
     int max_miejsce;
 } Plecak;
 
-/* --- POSTAC --- */
 typedef struct {
     int HP;
     int max_HP;
@@ -165,27 +179,26 @@ typedef struct {
     int poziom;
     int xp_do_lvlu;
     int szczescie;
-    int liczba_leczen; // Liczba mikstur leczenia
-    int liczba_pulapek; // Liczba pułapek, w które gracz wszedł
-    int liczba_wrogow;  // Liczba wrogów, z którymi gracz walczył
+    int liczba_leczen;
+    int liczba_pulapek;
+    int liczba_wrogow;
 } Postac;
 
 const char* kolory_rzadkosci[] = {
-    KOLOR_SZARY,         // Zniszczony
-    KOLOR_WHITE,         // Zwykly
-    KOLOR_NIEBIESKI,     // Slabej jakosci
-    KOLOR_JASNOZIELONY,  // Dobrej jakosci
-    KOLOR_ROZOWY,        // Mistrzowski
-    KOLOR_BOLD KOLOR_YELLOW // LEGENDARNY
+    KOLOR_SZARY,
+    KOLOR_WHITE,
+    KOLOR_NIEBIESKI,
+    KOLOR_JASNOZIELONY,
+    KOLOR_ROZOWY,
+    KOLOR_BOLD KOLOR_YELLOW
 };
 
-/* --- BFS --- */
 typedef struct {
     int x;
     int y;
 } Pozycja;
 
-/* --- CZYSZCZENIE EKRANU --- */
+
 void czysc_ekran() {
 #ifdef _WIN32
     system("cls");
@@ -194,7 +207,6 @@ void czysc_ekran() {
 #endif
 }
 
-/* --- PLECAK --- */
 void init_plecak(Plecak *plecak, int max_miejsce) {
     plecak->capacity = 8;
     plecak->items = malloc(plecak->capacity * sizeof(Przedmiot));
@@ -219,7 +231,6 @@ int gracz_ma_legendarny_amulet(Plecak *plecak) {
 }
 
 int dodaj_do_plecaka(Plecak *plecak, Przedmiot item, Postac* gracz) {
-    // Limit mikstur leczenia
     if (item.typ == PRZEDMIOT_LECZENIE) {
         int licznik = 0;
         for (int i = 0; i < plecak->count; i++)
@@ -235,7 +246,6 @@ int dodaj_do_plecaka(Plecak *plecak, Przedmiot item, Postac* gracz) {
     }
     if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
 
-    // Leczenie na górze plecaka
     if (item.typ == PRZEDMIOT_LECZENIE) {
         for (int i = plecak->count; i > 0; i--) {
             plecak->items[i] = plecak->items[i-1];
@@ -263,17 +273,15 @@ void usun_z_plecaka(Plecak *plecak, int idx) {
     plecak->count--;
 }
 
-/* --- GENEROWANIE PRZEDMIOTÓW --- */
 Przedmiot generuj_przedmiot(Postac* gracz) {
     Przedmiot item;
     int roll_typ = rand() % 100;
     int typ;
-    if (roll_typ < 15) typ = 3; // 15% szans na leczenie
-    else typ = rand() % 4; // 85% szans na broń/tarcze/zbroje
+    if (roll_typ < 15) typ = 3;
+    else typ = rand() % 4;
     int szczescie = gracz ? gracz->szczescie : 0;
     int poziom = gracz ? gracz->poziom : 1;
 
-    // Szansa na rzadkosc (im wyzszy poziom i szczescie, tym lepsze)
     int roll = rand() % 100 + szczescie + poziom * 2;
     if (roll > 98) item.rzadkosc = RZAD_LEG;
     else if (roll > 92) item.rzadkosc = RZAD_MISTRZ;
@@ -282,15 +290,14 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
     else if (roll > 30) item.rzadkosc = RZAD_ZWYKLY;
     else item.rzadkosc = RZAD_ZNISZCZONY;
 
-    // --- MNOŻNIKI RZADKOŚCI ---
     float mnoznik = 1.0f;
     switch (item.rzadkosc) {
-        case RZAD_ZNISZCZONY: mnoznik = 0.5f; break; // -50%
-        case RZAD_ZWYKLY:     mnoznik = 1.0f; break; // 100%
-        case RZAD_SLABY:      mnoznik = 0.8f; break; // 80%
-        case RZAD_DOBRY:      mnoznik = 1.2f + szczescie * 0.01f; break; // 120% + szczęście
-        case RZAD_MISTRZ:     mnoznik = 1.5f + szczescie * 0.01f; break; // 150% + szczęście
-        case RZAD_LEG:        mnoznik = 2.5f + szczescie * 0.02f; break; // 250% + szczęście
+        case RZAD_ZNISZCZONY: mnoznik = 0.5f; break;
+        case RZAD_ZWYKLY:     mnoznik = 1.0f; break;
+        case RZAD_SLABY:      mnoznik = 0.8f; break;
+        case RZAD_DOBRY:      mnoznik = 1.2f + szczescie * 0.01f; break;
+        case RZAD_MISTRZ:     mnoznik = 1.5f + szczescie * 0.01f; break;
+        case RZAD_LEG:        mnoznik = 2.5f + szczescie * 0.02f; break;
         default:              mnoznik = 1.0f;
     }
 
@@ -298,8 +305,7 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
     item.typ_leczenia = LECZENIE_ZWYKLE;
     item.typ_amuletu = AMULET_SZCZESCIA;
 
-    // --- Bron, Tarcza, Zbroja, Leczenie, Amulet ---
-    if (typ == 0) { // Bron
+    if (typ == 0) {
         item.typ = PRZEDMIOT_BRON;
         if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNY Miecz");
         else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Miecz Mistrza");
@@ -314,7 +320,7 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         item.bonus_szybkosc = 0.1f * item.rzadkosc * mnoznik;
         item.waga = 3 + item.rzadkosc;
         item.cena = (int)((10 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
-    } else if (typ == 1) { // Tarcza
+    } else if (typ == 1) {
         item.typ = PRZEDMIOT_TARCZA;
         if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Tarcza");
         else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Tarcza Mistrza");
@@ -329,7 +335,7 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         item.bonus_szybkosc = -0.05f * item.rzadkosc * mnoznik;
         item.waga = 4 + item.rzadkosc;
         item.cena = (int)((12 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
-    } else if (typ == 2) { // Zbroja
+    } else if (typ == 2) {
         item.typ = PRZEDMIOT_ZBROJA;
         if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Zbroja");
         else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Zbroja Mistrza");
@@ -344,7 +350,7 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         item.bonus_szybkosc = -0.1f * item.rzadkosc * mnoznik;
         item.waga = 5 + item.rzadkosc;
         item.cena = (int)((15 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
-    } else if (typ == 3) { // Leczenie
+    } else if (typ == 3) {
         item.typ = PRZEDMIOT_LECZENIE;
         int rodzaj = rand() % 3;
         if (rodzaj == 0) {
@@ -367,7 +373,7 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         item.bonus_szybkosc = 0.0f;
         item.waga = 1;
         item.cena = (int)((10 + item.rzadkosc * 10 + poziom * 2) * mnoznik);
-    } else { // Amulety
+    } else {
         item.typ = PRZEDMIOT_INNY;
         int rodzaj = rand() % 4;
         if (rodzaj == 0) {
@@ -463,9 +469,8 @@ void wyposaz_przedmiot(Postac *gracz, Plecak *plecak, int indeks) {
     scanf(" %c", &odp);
     int c; while ((c = getchar()) != '\n' && c != EOF) {}
     if (odp == 'T' || odp == 't') {
-        // Jeśli slot jest zajęty, zdejmij bonusy i przenieś stary przedmiot do plecaka
         if (gracz->sloty[slot] != NULL) {
-            usun_bonusy(gracz, gracz->sloty[slot]); // ODEJMIJ bonusy starego przedmiotu!
+            usun_bonusy(gracz, gracz->sloty[slot]);
             if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
             plecak->items[plecak->count++] = *(gracz->sloty[slot]);
             plecak->zajete_miejsce += gracz->sloty[slot]->waga;
@@ -473,10 +478,9 @@ void wyposaz_przedmiot(Postac *gracz, Plecak *plecak, int indeks) {
             free(gracz->sloty[slot]);
             gracz->sloty[slot] = NULL;
         }
-        // Załóż nowy przedmiot i dodaj bonusy
         gracz->sloty[slot] = malloc(sizeof(Przedmiot));
         *(gracz->sloty[slot]) = *item;
-        zastosuj_bonusy(gracz, item); // DODAJ bonusy nowego przedmiotu!
+        zastosuj_bonusy(gracz, item);
         printf("Wyposazono: %s\n", item->nazwa);
         usun_z_plecaka(plecak, indeks);
     } else {
@@ -571,7 +575,13 @@ void przegladaj_plecak(Plecak *plecak, Postac *gracz) {
         if (linia[0] == 'q' || linia[0] == 'Q') break;
         if (sscanf(linia, "L %d", &wybor) == 1) {
             uzyj_leczenie(gracz, plecak, wybor);
-        } else if (sscanf(linia, "W %d", &wybor) == 1) {
+        } else if ((sscanf(linia, "W %d", &wybor) == 1) || (sscanf(linia, "w %d", &wybor) == 1)) {
+            if (wybor >= 0 && wybor < plecak->count) {
+                printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
+                usun_z_plecaka(plecak, wybor);
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+            }
             if (wybor >= 0 && wybor < plecak->count) {
                 printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
                 usun_z_plecaka(plecak, wybor);
@@ -682,7 +692,7 @@ void generuj_mape(Mapa* mapa, TypLokacji typ_lokacji) {
 }
 
 /* --- MAPA I RYSOWANIE --- */
-void rysuj_legenda(Mapa* mapa, TypLokacji typ_lokacji) {
+void rysuj_legenda(Mapa* mapa, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
     printf(KOLOR_BOLD KOLOR_MAGENTA "LEGENDA MAPY:\n" KOLOR_RESET);
     printf(". - puste pole\n");
     printf(KOLOR_WHITE "#" KOLOR_RESET " - sciana\n");
@@ -692,16 +702,13 @@ void rysuj_legenda(Mapa* mapa, TypLokacji typ_lokacji) {
     printf(KOLOR_RED "P" KOLOR_RESET " - przeciwnik (walka)\n");
     printf(KOLOR_CYAN "B" KOLOR_RESET " - brama (przejscie na kolejny poziom – mapa generowana na nowo)\n");
     printf(KOLOR_GREEN "@" KOLOR_RESET " - Twoja postac\n");
-    if (typ_lokacji == LOKACJA_WIOSKA) {
-        if (mapa->czy_jest_kupiec)
-            printf(KOLOR_BOLD KOLOR_YELLOW "W tej wiosce jest kupiec! (K)\n" KOLOR_RESET);
-        else
-            printf(KOLOR_BOLD KOLOR_RED "W tej wiosce nie ma kupca!\n" KOLOR_RESET);
-    }
+    if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec)
+        printf(KOLOR_BOLD KOLOR_YELLOW "K" KOLOR_RESET " - Kupiec (sklep)\n");
+    printf(KOLOR_MAGENTA "Q" KOLOR_RESET " - NPC z zadaniem (losowa pozycja w wiosce)\n");
     printf("---------------------------------\n\n");
 }
 
-void rysuj_mape(Mapa* mapa, int graczX, int graczY, TypLokacji typ_lokacji) {
+void rysuj_mape(Mapa* mapa, int graczX, int graczY, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
     printf("   +");
     for (int x = 0; x < mapa->szerokosc; x++) printf("--");
     printf("+  [%s]\n", nazwy_lokacji[typ_lokacji]);
@@ -719,8 +726,9 @@ void rysuj_mape(Mapa* mapa, int graczX, int graczY, TypLokacji typ_lokacji) {
         for (int x = 0; x < mapa->szerokosc; x++) {
             if (x == graczX && y == graczY) {
                 printf(KOLOR_GREEN " @" KOLOR_RESET);
+            } else if (typ_lokacji == LOKACJA_WIOSKA && npc_quest && npc_quest->aktywny && x == npc_quest->x && y == npc_quest->y) {
+                printf(KOLOR_MAGENTA " Q" KOLOR_RESET);
             } else if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec && x == 0 && y == 0) {
-                // Kupiec zawsze w lewym górnym rogu wioski
                 printf(KOLOR_BOLD KOLOR_YELLOW " K" KOLOR_RESET);
             } else {
                 switch (mapa->komorki[y][x].typ) {
@@ -802,6 +810,142 @@ void generuj_przechodna_mape(Mapa* mapa, TypLokacji* typ_lokacji) {
     } while (!is_map_traversable(mapa, 1, 1) || !is_skarb_dostepny(mapa, 1, 1));
 }
 
+int czy_npc_dostepny(Mapa* mapa, int startX, int startY, int npcX, int npcY) {
+    int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
+    Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
+    int head = 0, tail = 0;
+    queue[tail++] = (Pozycja){startX, startY};
+    visited[startY][startX] = 1;
+    int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
+    while (head < tail) {
+        Pozycja current = queue[head++];
+        if (current.x == npcX && current.y == npcY)
+            return 1;
+        for (int i = 0; i < 4; i++) {
+            int nx = current.x + directions[i][0];
+            int ny = current.y + directions[i][1];
+            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
+                    visited[ny][nx] = 1;
+                    queue[tail++] = (Pozycja){nx, ny};
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+void losuj_pozycje_npc(Mapa* mapa, NPCQuest* npc_quest) {
+    int x, y;
+    do {
+        x = rand() % mapa->szerokosc;
+        y = rand() % mapa->wysokosc;
+    } while (mapa->komorki[y][x].typ == SCIANA || mapa->komorki[y][x].typ == BRAMA
+             || (x == 0 && y == 0 && mapa->czy_jest_kupiec)
+             || !czy_npc_dostepny(mapa, 1, 1, x, y));
+    npc_quest->x = x;
+    npc_quest->y = y;
+    npc_quest->aktywny = 1;
+}
+
+// --- Funkcja do generowania questa ---
+void generuj_questa(Quest *quest, Postac *gracz) {
+    TypQuestu poprzedni = quest->typ;
+    TypQuestu nowy;
+    do {
+        nowy = (rand() % 2) ? QUEST_ZABIJ_WROGOW : QUEST_WEJDZ_PULAPKI;
+    } while (nowy == poprzedni && poprzedni != QUEST_BRAK);
+    quest->typ = nowy;
+    if (quest->typ == QUEST_ZABIJ_WROGOW) {
+        quest->wymagane = 5 + rand() % 6;
+        printf("Zadanie: Pokonaj %d przeciwnikow!\n", quest->wymagane);
+    } else if (quest->typ == QUEST_WEJDZ_PULAPKI) {
+        quest->wymagane = 3 + rand() % 4;
+        printf("Zadanie: Wejdz w %d pulapek!\n", quest->wymagane);
+    }
+    quest->postep = 0;
+    quest->aktywny = 1;
+    quest->do_odebrania = 1;
+    quest->start_wrogow = gracz->liczba_wrogow;
+    quest->start_pulapek = gracz->liczba_pulapek;
+}
+
+// --- Dialog z NPC ---
+void dialog_npc(Postac *gracz, Quest *quest, Plecak *plecak) {
+    while (1) {
+        czysc_ekran();
+        printf(KOLOR_BOLD KOLOR_MAGENTA "NPC od zadan\n" KOLOR_RESET);
+        printf("1. Zapytaj o questa\n");
+        printf("2. Odbierz nagrode za wykonane zadanie\n");
+        printf("3. Zrezygnuj z questa\n");
+        printf("q. Wyjdz\n");
+        char linia[16];
+        fgets(linia, sizeof(linia), stdin);
+        if (linia[0] == 'q' || linia[0] == 'Q') break;
+        int wybor = atoi(linia);
+        if (wybor == 1) {
+            if (!quest->aktywny && !quest->do_odebrania) {
+                generuj_questa(quest, gracz);
+                printf("Nowe zadanie przyjete!\n");
+            } else if (quest->aktywny) {
+                printf("Aktualne zadanie: ");
+                if (quest->typ == QUEST_ZABIJ_WROGOW)
+                    printf("Pokonaj %d przeciwnikow (postep: %d/%d)\n", quest->wymagane, gracz->liczba_wrogow - quest->start_wrogow, quest->wymagane);
+                else if (quest->typ == QUEST_WEJDZ_PULAPKI)
+                    printf("Wejdz w %d pulapek (postep: %d/%d)\n", quest->wymagane, gracz->liczba_pulapek - quest->start_pulapek, quest->wymagane);
+                } else if (quest->do_odebrania) {
+                printf("Masz ukonczone zadanie! Odbierz nagrode.\n");
+            }
+            printf("Wcisnij ENTER aby kontynuowac...");
+            fgets(linia, sizeof(linia), stdin);
+                } else if (wybor == 2) {
+            int ukonczone = 0;
+            if (quest->aktywny) {
+                if ((quest->typ == QUEST_ZABIJ_WROGOW && (gracz->liczba_wrogow - quest->start_wrogow) >= quest->wymagane) ||
+                    (quest->typ == QUEST_WEJDZ_PULAPKI && (gracz->liczba_pulapek - quest->start_pulapek) >= quest->wymagane)) {
+                    ukonczone = 1;
+                }
+            }
+            if (ukonczone) {
+                printf(KOLOR_GREEN "Gratulacje! Zadanie wykonane!\n" KOLOR_RESET);
+                int nagroda_waluta = 30 + rand() % 41; // 30-70 waluty
+                gracz->waluta += nagroda_waluta;
+                printf("Otrzymujesz %d waluty!\n", nagroda_waluta);
+                Przedmiot nagroda = generuj_przedmiot(gracz);
+                dodaj_do_plecaka(plecak, nagroda, gracz);
+                // Szansa na powiększenie plecaka
+                if (rand() % 30 == 0) {
+                    plecak->max_miejsce += 5;
+                    printf(KOLOR_BOLD KOLOR_YELLOW "Twój plecak powiększa się o 5!\n" KOLOR_RESET);
+                }
+                quest->aktywny = 0;
+                quest->do_odebrania = 0;
+                quest->typ = QUEST_BRAK;
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+                break;
+            } else {
+                printf("Nie ukonczyles jeszcze zadania!\n");
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+            }
+        }
+         else if (wybor == 3) {
+            if (quest->aktywny) {
+                printf("Zrezygnowales z questa. Nowe zadanie mozesz wziac u kolejnego NPC.\n");
+                quest->aktywny = 0;
+                quest->do_odebrania = 0;
+                quest->typ = QUEST_BRAK;
+            } else {
+                printf("Nie masz aktywnego questa.\n");
+            }
+            printf("Wcisnij ENTER aby kontynuowac...");
+            fgets(linia, sizeof(linia), stdin);
+            break;
+        }
+    }
+}
+
 /* --- KUPIEC --- */
 void sklep(Postac *gracz, Plecak *plecak) {
     while (1) {
@@ -809,6 +953,7 @@ void sklep(Postac *gracz, Plecak *plecak) {
         printf("Twoja waluta: %d\n", gracz->waluta);
         printf("1. Sprzedaj przedmiot z plecaka\n");
         printf("2. Kup LEGENDARNY przedmiot\n");
+        printf("3. Powieksz plecak o 10 (koszt: 100 waluty)\n");
         printf("q. Wyjdz\n");
         char linia[16];
         fgets(linia, sizeof(linia), stdin);
@@ -827,36 +972,83 @@ void sklep(Postac *gracz, Plecak *plecak) {
             if (linia[0] == 'q' || linia[0] == 'Q') continue;
             int idx = atoi(linia);
             if (idx >= 0 && idx < plecak->count) {
-                printf("Sprzedano %s za %d waluty!\n", plecak->items[idx].nazwa, plecak->items[idx].cena);
-                gracz->waluta += plecak->items[idx].cena;
-                usun_z_plecaka(plecak, idx);
+                printf("Na pewno chcesz sprzedac %s za %d waluty? (T/N): ", plecak->items[idx].nazwa, plecak->items[idx].cena);
+                char potw[8];
+                fgets(potw, sizeof(potw), stdin);
+                if (potw[0] == 'T' || potw[0] == 't') {
+                    printf("Sprzedano %s za %d waluty!\n", plecak->items[idx].nazwa, plecak->items[idx].cena);
+                    gracz->waluta += plecak->items[idx].cena;
+                    usun_z_plecaka(plecak, idx);
+                } else {
+                    printf("Anulowano sprzedaz.\n");
+                }
             }
         } else if (wybor == 2) {
-            printf("Dostepne LEGENDARNE przedmioty:\n");
-            Przedmiot legendarne[3];
-            for (int i = 0; i < 3; i++) {
-                legendarne[i] = generuj_przedmiot(gracz);
-                legendarne[i].rzadkosc = RZAD_LEG;
-                if (i == 0) { legendarne[i].typ = PRZEDMIOT_BRON; snprintf(legendarne[i].nazwa, 50, "EXCALIBUR"); }
-                if (i == 1) { legendarne[i].typ = PRZEDMIOT_TARCZA; snprintf(legendarne[i].nazwa, 50, "AEGIS"); }
-                if (i == 2) { legendarne[i].typ = PRZEDMIOT_ZBROJA; snprintf(legendarne[i].nazwa, 50, "DRAGON ARMOR"); }
+    printf("Dostepne LEGENDARNE przedmioty:\n");
+    Przedmiot legendarne[3];
+
+    // Miecz
+    snprintf(legendarne[0].nazwa, 50, "EXCALIBUR");
+    legendarne[0].typ = PRZEDMIOT_BRON;
+    legendarne[0].rzadkosc = RZAD_LEG;
+    legendarne[0].bonus_obrazen = 50;
+    legendarne[0].bonus_odpornosci = 0;
+    legendarne[0].bonus_HP = 20;
+    legendarne[0].bonus_sila = 10;
+    legendarne[0].bonus_szybkosc = 0.5f;
+    legendarne[0].waga = 7;
+    legendarne[0].cena = 500;
+
+    // Tarcza
+    snprintf(legendarne[1].nazwa, 50, "AEGIS");
+    legendarne[1].typ = PRZEDMIOT_TARCZA;
+    legendarne[1].rzadkosc = RZAD_LEG;
+    legendarne[1].bonus_obrazen = 0;
+    legendarne[1].bonus_odpornosci = 40;
+    legendarne[1].bonus_HP = 30;
+    legendarne[1].bonus_sila = 0;
+    legendarne[1].bonus_szybkosc = -0.2f;
+    legendarne[1].waga = 8;
+    legendarne[1].cena = 450;
+
+    // Zbroja
+    snprintf(legendarne[2].nazwa, 50, "DRAGON ARMOR");
+    legendarne[2].typ = PRZEDMIOT_ZBROJA;
+    legendarne[2].rzadkosc = RZAD_LEG;
+    legendarne[2].bonus_obrazen = 0;
+    legendarne[2].bonus_odpornosci = 60;
+    legendarne[2].bonus_HP = 50;
+    legendarne[2].bonus_sila = 0;
+    legendarne[2].bonus_szybkosc = -0.5f;
+    legendarne[2].waga = 10;
+    legendarne[2].cena = 600;
+
+    for (int i = 0; i < 3; i++) {
+        printf(KOLOR_BOLD KOLOR_YELLOW "%d: %s (cena: %d, waga: %d, obrazenia: %d, odpornosc: %d, HP: %d, sila: %d, szybkosc: %.2f)\n" KOLOR_RESET,
+            i, legendarne[i].nazwa, legendarne[i].cena, legendarne[i].waga, legendarne[i].bonus_obrazen,
+            legendarne[i].bonus_odpornosci, legendarne[i].bonus_HP, legendarne[i].bonus_sila, legendarne[i].bonus_szybkosc);
+    }
+    printf("Wybierz nr przedmiotu do kupienia (q aby anulowac): ");
+    fgets(linia, sizeof(linia), stdin);
+    if (linia[0] == 'q' || linia[0] == 'Q') continue;
+    int idx = atoi(linia);
+    if (idx >= 0 && idx < 3) {
+        if (gracz->waluta >= legendarne[idx].cena) {
+            if (dodaj_do_plecaka(plecak, legendarne[idx], gracz)) {
+                gracz->waluta -= legendarne[idx].cena;
+                printf(KOLOR_BOLD KOLOR_YELLOW "Kupiono %s!\n" KOLOR_RESET, legendarne[idx].nazwa);
             }
-            for (int i = 0; i < 3; i++) {
-                printf(KOLOR_BOLD KOLOR_YELLOW "%d: %s (cena: %d, waga: %d)\n" KOLOR_RESET, i, legendarne[i].nazwa, legendarne[i].cena, legendarne[i].waga);
-            }
-            printf("Wybierz nr przedmiotu do kupienia (q aby anulowac): ");
-            fgets(linia, sizeof(linia), stdin);
-            if (linia[0] == 'q' || linia[0] == 'Q') continue;
-            int idx = atoi(linia);
-            if (idx >= 0 && idx < 3) {
-                if (gracz->waluta >= legendarne[idx].cena) {
-                    if (dodaj_do_plecaka(plecak, legendarne[idx], gracz)) {
-                        gracz->waluta -= legendarne[idx].cena;
-                        printf(KOLOR_BOLD KOLOR_YELLOW "Kupiono %s!\n" KOLOR_RESET, legendarne[idx].nazwa);
-                    }
-                } else {
-                    printf("Nie masz wystarczajaco waluty!\n");
-                }
+        } else {
+            printf("Nie masz wystarczajaco waluty!\n");
+        }
+    }
+} else if (wybor == 3) {
+            if (gracz->waluta >= 100) {
+                plecak->max_miejsce += 10;
+                gracz->waluta -= 100;
+                printf(KOLOR_BOLD KOLOR_YELLOW "Plecak powiekszony o 10!\n" KOLOR_RESET);
+            } else {
+                printf("Nie masz wystarczajaco waluty!\n");
             }
         }
     }
@@ -870,17 +1062,15 @@ void porusz_gracza(Mapa* mapa, int* graczX, int* graczY, TypLokacji typ_lokacji,
     printf("): ");
     scanf(" %c", &ruch);
 
-
+    if ((ruch == 'K' || ruch == 'k') && typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec) {
+        *graczX = 0;
+        *graczY = 0;
+        return;
+    }
     if (ruch == 'E' || ruch == 'e') {
         *graczX = -1;
         return;
     }
-    if ((ruch == 'K' || ruch == 'k') && typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec) {
-        sklep(gracz, plecak);
-        *graczX = -2;
-        return;
-    }
-
     int nowyX = *graczX, nowyY = *graczY;
     if (ruch == 'W' || ruch == 'w') nowyY--;
     else if (ruch == 'S' || ruch == 's') nowyY++;
@@ -909,6 +1099,8 @@ int oblicz_obrazenia(Postac* attacker, Postac* defender) {
         damage = 1;
     return damage;
 }
+
+void pokaz_podsumowanie(Postac* gracz);
 
 // --- Zastąp całą funkcję walka poniższą wersją, aby szybkość wpływała na kolejność i dodatkowy atak ---
 
@@ -960,7 +1152,7 @@ void walka(Postac* gracz, Postac* przeciwnik, Plecak *plecak) {
                 gracz->XP += 30;
                 gracz->liczba_wrogow++; // Dodaj to!
                 if (rand() % 100 < 40) {
-                    Przedmiot item = generuj_przedmiot(&gracz);
+                    Przedmiot item = generuj_przedmiot(gracz);
                     printf(KOLOR_BOLD KOLOR_YELLOW "Zdobywasz przedmiot: %s\n" KOLOR_RESET, item.nazwa);
                     dodaj_do_plecaka(plecak, item, gracz);
                 }
@@ -1026,7 +1218,7 @@ void level_up(Postac* gracz) {
         gracz->szybkosc *= 1.1f;
         printf("Twoja szybkosc wzrosla!\n");
     }
-    gracz->xp_do_lvlu += LEVELUP_XP;
+    gracz->xp_do_lvlu += LEVELUP_XP * gracz->poziom; // Zwiększ wymagane XP do kolejnego poziomu
 }
 
 /* --- GENEROWANIE POSTACI --- */
@@ -1095,30 +1287,57 @@ Postac generuj_przeciwnika(Postac *gracz) {
 
 /* --- INFO --- */
 void wyswietl_informacje(Postac* gracz) {
-    printf(KOLOR_BOLD KOLOR_CYAN "=== STATYSTYKI GRACZA ===\n" KOLOR_RESET);
+    printf(KOLOR_BOLD KOLOR_CYAN "╔══════════════════════════════════════════════════╗\n" KOLOR_RESET);
+    printf(KOLOR_BOLD KOLOR_CYAN "║              STATYSTYKI GRACZA                  ║\n" KOLOR_RESET);
+    printf(KOLOR_BOLD KOLOR_CYAN "╚══════════════════════════════════════════════════╝\n" KOLOR_RESET);
+
     int calkowite_HP = gracz->HP + gracz->bonus_HP;
     int max_calkowite_HP = gracz->max_HP + gracz->bonus_HP;
     float calkowita_szybkosc = gracz->szybkosc + gracz->bonus_szybkosc;
     float calkowita_sila = gracz->sila + gracz->bonus_sila;
-    printf("Poziom: %d\n", gracz->poziom);
-    printf("XP: %ld / %d\n", gracz->XP, gracz->xp_do_lvlu);
-    printf("Waluta: %d\n", gracz->waluta);
-    printf("Szczescie: %d\n", gracz->szczescie); // DODANE
-    printf("HP: %d (bazowe) + %d (bonus) = %d / %d (max)\n", gracz->HP, gracz->bonus_HP, calkowite_HP, max_calkowite_HP);
+    float procent_hp = (float)calkowite_HP / (float)max_calkowite_HP;
+
+    // Kolorowanie HP
+    const char* kolor_hp;
+    if (procent_hp >= 0.75f) {
+        kolor_hp = KOLOR_GREEN;
+    } else if (procent_hp >= 0.3f) {
+        kolor_hp = KOLOR_YELLOW;
+    } else {
+        kolor_hp = KOLOR_RED;
+    }
+
+    printf(KOLOR_BOLD "Poziom: " KOLOR_RESET "%d\n", gracz->poziom);
+    printf(KOLOR_BOLD "XP:     " KOLOR_RESET "%ld / %d\n", gracz->XP, gracz->xp_do_lvlu);
+    printf(KOLOR_BOLD "Waluta: " KOLOR_RESET "%d\n", gracz->waluta);
+    printf(KOLOR_BOLD "Szczęście: " KOLOR_RESET "%d\n", gracz->szczescie);
+
+    // HP z kolorowaniem
+    printf(KOLOR_BOLD "HP:     " KOLOR_RESET "%s%d%s / %d ", kolor_hp, calkowite_HP, KOLOR_RESET, max_calkowite_HP);
+    printf("(bazowe: %d, bonus: %d)\n", gracz->HP, gracz->bonus_HP);
+
+    // Sloty
+    printf(KOLOR_BOLD "Wyposażenie:\n" KOLOR_RESET);
     for (int i = 0; i < SLOT_ILOSC; i++) {
+        printf("  %s: ", i == SLOT_BRON ? "Broń   " : i == SLOT_TARCZA ? "Tarcza " : "Zbroja ");
         if (gracz->sloty[i]) {
-            printf("%s: ", i == SLOT_BRON ? "Bron" : i == SLOT_TARCZA ? "Tarcza" : "Zbroja");
             if (gracz->sloty[i]->rzadkosc == RZAD_LEG)
                 printf(KOLOR_BOLD KOLOR_YELLOW "%s" KOLOR_RESET "\n", gracz->sloty[i]->nazwa);
             else
                 printf("%s\n", gracz->sloty[i]->nazwa);
+        } else {
+            printf(KOLOR_SZARY "brak" KOLOR_RESET "\n");
         }
     }
-    printf("Sila: %.2f (bazowa: %.2f + bonus: %d)\n", calkowita_sila, gracz->sila, gracz->bonus_sila);
-    printf("Odpornosc: %.2f (bazowa: %.2f + bonus: %d)\n", gracz->odp_pancerza + gracz->bonus_odpornosc, gracz->odp_pancerza, gracz->bonus_odpornosc);
-    printf("Szybkosc: %.2f (bazowa: %.2f + bonus: %.2f)\n", calkowita_szybkosc, gracz->szybkosc, gracz->bonus_szybkosc);
-    printf("---------------------------------\n\n");
+
+    printf(KOLOR_BOLD "Statystyki:\n" KOLOR_RESET);
+    printf("  Siła:       " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %d)\n", calkowita_sila, gracz->sila, gracz->bonus_sila);
+    printf("  Odporność:  " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %d)\n", gracz->odp_pancerza + gracz->bonus_odpornosc, gracz->odp_pancerza, gracz->bonus_odpornosc);
+    printf("  Szybkość:   " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %.2f)\n", calkowita_szybkosc, gracz->szybkosc, gracz->bonus_szybkosc);
+
+    printf(KOLOR_BOLD KOLOR_CYAN "--------------------------------------------------\n" KOLOR_RESET);
 }
+
 
 void pokaz_podsumowanie(Postac* gracz) {
     printf(KOLOR_BOLD KOLOR_RED "\n=== KONIEC GRY ===\n" KOLOR_RESET);
@@ -1134,7 +1353,7 @@ void pokaz_podsumowanie(Postac* gracz) {
 /* --- MAIN --- */
 int main() {
     #ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);    // Ustawia UTF-8 w Windowsowej konsoli
+    SetConsoleOutputCP(CP_UTF8);
     #endif
     Mapa mapa;
     TypLokacji typ_lokacji;
@@ -1144,13 +1363,22 @@ int main() {
     Plecak plecak;
     init_plecak(&plecak, 40);
 
+    Quest quest = {QUEST_BRAK, 0, 0, 0, 0};
+    NPCQuest npc_quest = {0, 0, 0};
+
     generuj_przechodna_mape(&mapa, &typ_lokacji);
+
+    if (typ_lokacji == LOKACJA_WIOSKA) {
+        losuj_pozycje_npc(&mapa, &npc_quest);
+    } else {
+        npc_quest.aktywny = 0;
+    }
 
     while (1) {
         czysc_ekran();
-        rysuj_legenda(&mapa, typ_lokacji);
+        rysuj_legenda(&mapa, typ_lokacji, &npc_quest);
         wyswietl_informacje(&gracz);
-        rysuj_mape(&mapa, gracz.pozycjaX, gracz.pozycjaY, typ_lokacji);
+        rysuj_mape(&mapa, gracz.pozycjaX, gracz.pozycjaY, typ_lokacji, &npc_quest);
 
         int oldX = gracz.pozycjaX;
         int oldY = gracz.pozycjaY;
@@ -1169,10 +1397,27 @@ int main() {
             continue;
         }
 
+        // NAJPIERW KUPIEC!
+        if (typ_lokacji == LOKACJA_WIOSKA && mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0) {
+            sklep(&gracz, &plecak);
+            gracz.pozycjaX = oldX;
+            gracz.pozycjaY = oldY;
+            continue;
+        }
+
+        // POTEM NPC, ALE NIE NA (0,0) GDZIE JEST KUPIEC
+        if (typ_lokacji == LOKACJA_WIOSKA && npc_quest.aktywny &&
+            gracz.pozycjaX == npc_quest.x && gracz.pozycjaY == npc_quest.y &&
+            !(mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0)) {
+            dialog_npc(&gracz, &quest, &plecak);
+            gracz.pozycjaX = oldX;
+            gracz.pozycjaY = oldY;
+            continue;
+        }
+
         TypKomorki aktualna = mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ;
         if (typ_lokacji == LOKACJA_WIOSKA && mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0) {
             sklep(&gracz, &plecak);
-            // Po wyjściu ze sklepu gracz wraca na poprzednie pole, żeby nie blokować wejścia do sklepu
             gracz.pozycjaX = oldX;
             gracz.pozycjaY = oldY;
             continue;
@@ -1237,7 +1482,7 @@ int main() {
             printf("Wcisnij ENTER aby kontynuowac...");
             getchar(); getchar();
         } else if (aktualna == PULAPKA) {
-            int dmg = 3 + gracz.poziom - (gracz.szczescie / 3); // np. 3 + poziom - szczęście/3
+            int dmg = 3 + gracz.poziom - (gracz.szczescie / 3);
             if (dmg < 2) dmg = 2;
             printf(KOLOR_RED "Wpadles w pulapke! Tracisz %d HP i zyskujesz 1 szczescia.\n" KOLOR_RESET, dmg);
             gracz.HP -= dmg;
@@ -1260,11 +1505,18 @@ int main() {
             mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ = PUSTE;
             printf("Wcisnij ENTER aby kontynuowac...");
             getchar(); getchar();
-        } else if (aktualna == BRAMA) {
+         } else if (aktualna == BRAMA) {
             printf(KOLOR_BOLD KOLOR_MAGENTA "Weszles przez brame! Przechodzisz na kolejny poziom.\n" KOLOR_RESET);
             generuj_przechodna_mape(&mapa, &typ_lokacji);
             gracz.pozycjaX = 1;
             gracz.pozycjaY = 1;
+            // Po wygenerowaniu nowej mapy, losuj NPC w wiosce
+            if (typ_lokacji == LOKACJA_WIOSKA) {
+                losuj_pozycje_npc(&mapa, &npc_quest);
+            } else {
+                npc_quest.aktywny = 0;
+            }
+            continue;
         }
 
         // LEVEL UP
