@@ -277,8 +277,10 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
     Przedmiot item;
     int roll_typ = rand() % 100;
     int typ;
-    if (roll_typ < 15) typ = 3; //15% szans na miksture
-    else typ = rand() % 4;  // 0: broń, 1: tarcza, 2: zbroja, 3: inny (amulet)
+    if (roll_typ < 15) typ = 3;         // 15% szans na miksturę
+    else if (roll_typ < 25) typ = 4;    // 10% szans na amulet
+    else typ = rand() % 3;              // 0: broń, 1: tarcza, 2: zbroja
+
     int szczescie = gracz ? gracz->szczescie : 0;
     int poziom = gracz ? gracz->poziom : 1;
 
@@ -373,7 +375,7 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
         item.bonus_szybkosc = 0.0f;
         item.waga = 1;
         item.cena = (int)((10 + item.rzadkosc * 10 + poziom * 2) * mnoznik);
-    } else {
+    } else if (typ == 4) {
         item.typ = PRZEDMIOT_INNY;
         int rodzaj = rand() % 4;
         if (rodzaj == 0) {
