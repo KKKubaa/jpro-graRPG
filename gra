@@ -277,8 +277,8 @@ Przedmiot generuj_przedmiot(Postac* gracz) {
     Przedmiot item;
     int roll_typ = rand() % 100;
     int typ;
-    if (roll_typ < 15) typ = 3;
-    else typ = rand() % 4;
+    if (roll_typ < 15) typ = 3; //15% szans na miksture
+    else typ = rand() % 4;  // 0: broń, 1: tarcza, 2: zbroja, 3: inny (amulet)
     int szczescie = gracz ? gracz->szczescie : 0;
     int poziom = gracz ? gracz->poziom : 1;
 
@@ -576,12 +576,6 @@ void przegladaj_plecak(Plecak *plecak, Postac *gracz) {
         if (sscanf(linia, "L %d", &wybor) == 1) {
             uzyj_leczenie(gracz, plecak, wybor);
         } else if ((sscanf(linia, "W %d", &wybor) == 1) || (sscanf(linia, "w %d", &wybor) == 1)) {
-            if (wybor >= 0 && wybor < plecak->count) {
-                printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
-                usun_z_plecaka(plecak, wybor);
-                printf("Wcisnij ENTER aby kontynuowac...");
-                fgets(linia, sizeof(linia), stdin);
-            }
             if (wybor >= 0 && wybor < plecak->count) {
                 printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
                 usun_z_plecaka(plecak, wybor);
