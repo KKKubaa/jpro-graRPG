@@ -194,8 +194,6 @@ const char* kolory_rzadkosci[] = {
     KOLOR_BOLD KOLOR_YELLOW
 };
 
-void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest);
-
 typedef struct {
     int x;
     int y;
@@ -1411,7 +1409,6 @@ void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* map
     printf("Gra zostala zapisana do pliku %s\n", filename);
 }
 
-// --- Wczytywanie gry ---
 int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
     char filename[64];
     printf("Podaj imie/nazwe postaci do wczytania: ");
@@ -1460,14 +1457,6 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
     if (ile == 24) typ_lok = 0; // domyślnie LOKACJA_LAS
     *typ_lokacji = (TypLokacji)typ_lok;
 
-    // Wyczyść stare sloty (ważne przy kolejnym wczytywaniu)
-    for (int i = 0; i < SLOT_ILOSC; i++) {
-        if (gracz->sloty[i]) {
-            free(gracz->sloty[i]);
-            gracz->sloty[i] = NULL;
-        }
-    }
-
     // Wczytaj sloty wyposażenia
     for (int i = 0; i < SLOT_ILOSC; i++) {
         char linia_slot[256];
@@ -1480,11 +1469,11 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
             gracz->sloty[i] = NULL;
         } else {
             char buf[50];
-            Przedmiot *it = malloc(sizeof(Przedmiot));
+            Przedmiot *it = malloc(sizeof(Przedmiot)); // Poprawka: alokuj pamięć!
             int ret = sscanf(linia_slot, "SLOT %d %49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d",
                 &idx, buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP,
                 &it->bonus_sila, &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie, &it->typ_leczenia, &it->typ_amuletu);
-            if (ret == 13) {
+            if (ret == 14) {
                 strncpy(it->nazwa, buf, sizeof(it->nazwa) - 1);
                 it->nazwa[sizeof(it->nazwa) - 1] = '\0';
                 gracz->sloty[i] = it;
@@ -1531,12 +1520,6 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
         fclose(f);
         return 0;
     }
-    // --- ZABEZPIECZENIE PRZED ZŁYMI DANYMI ---
-    if (plecak->count < 0 || plecak->capacity < 0 || plecak->count > 1000 || plecak->capacity > 1000) {
-        printf("Błąd: nieprawidłowe wartości plecaka w pliku!\n");
-        fclose(f);
-        return 0;
-    }
     if (plecak->capacity < plecak->count) {
         plecak->capacity = plecak->count;
     }
@@ -1560,18 +1543,6 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
         it->nazwa[sizeof(it->nazwa) - 1] = '\0';
     }
     fclose(f);
-
-    // Po wczytaniu slotów, dolicz bonusy do postaci!
-    gracz->bonus_HP = 0;
-    gracz->bonus_sila = 0;
-    gracz->bonus_odpornosc = 0;
-    gracz->bonus_szybkosc = 0.0f;
-    for (int i = 0; i < SLOT_ILOSC; i++) {
-        if (gracz->sloty[i]) {
-            zastosuj_bonusy(gracz, gracz->sloty[i]);
-        }
-    }
-
     printf("Gra zostala wczytana z pliku %s\n", filename);
     return 1;
 }
@@ -1586,7 +1557,6 @@ int main() {
 
     Postac gracz;
     Plecak plecak;
-    plecak.items = NULL; // DODAJ TO!
     NPCQuest npc_quest = (NPCQuest){0, 0, 0};
     int loaded = 0;
 
@@ -1594,10 +1564,7 @@ int main() {
     char wybor[8];
     fgets(wybor, sizeof(wybor), stdin);
     if (wybor[0] == '2') {
-        if (plecak.items != NULL) { // <-- DODAJ TO!
-         free(plecak.items);
-         plecak.items = NULL;
-        }
+        init_plecak(&plecak, 40);
         loaded = wczytaj_gre(&gracz, &plecak, &typ_lokacji, &mapa, &npc_quest);
         if (!loaded) {
             printf("Nie udalo sie wczytac gry. Tworze nowa postac.\n");
@@ -1627,11 +1594,13 @@ int main() {
         }
     }
 
-    // for (int i = 0; i < SLOT_ILOSC; i++) {
-    //     if (gracz.sloty[i]) {
-    //         zastosuj_bonusy(&gracz, gracz.sloty[i]);
-    //     }
-    // }
+    generuj_przechodna_mape(&mapa, &typ_lokacji);
+
+    if (typ_lokacji == LOKACJA_WIOSKA) {
+        losuj_pozycje_npc(&mapa, &npc_quest);
+    } else {
+        npc_quest.aktywny = 0;
+    }
 
     while (1) {
         czysc_ekran();
