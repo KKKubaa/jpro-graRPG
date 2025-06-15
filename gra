@@ -1,1464 +1,1514 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <string.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <time.h>
+    #include <string.h>
 
-#ifdef _WIN32
-    #include <windows.h>
-#endif
+    #ifdef _WIN32
+        #include <windows.h>
+    #endif
 
-#define KOLOR_RESET   "\033[0m"
-#define KOLOR_CYAN    "\033[1;36m"
-#define KOLOR_YELLOW  "\033[1;33m"
-#define KOLOR_GREEN   "\033[1;32m"
-#define KOLOR_MAGENTA "\033[1;35m"
-#define KOLOR_RED     "\033[1;31m"
-#define KOLOR_BOLD    "\033[1m"
-#define KOLOR_WHITE   "\033[1;37m"
-#define KOLOR_SZARY    "\033[1;30m"
-#define KOLOR_NIEBIESKI "\033[1;34m"
-#define KOLOR_ROZOWY   "\033[1;95m"
-#define KOLOR_JASNOZIELONY "\033[1;92m"
+    #define KOLOR_RESET   "\033[0m"
+    #define KOLOR_CYAN    "\033[1;36m"
+    #define KOLOR_YELLOW  "\033[1;33m"
+    #define KOLOR_GREEN   "\033[1;32m"
+    #define KOLOR_MAGENTA "\033[1;35m"
+    #define KOLOR_RED     "\033[1;31m"
+    #define KOLOR_BOLD    "\033[1m"
+    #define KOLOR_WHITE   "\033[1;37m"
+    #define KOLOR_SZARY    "\033[1;30m"
+    #define KOLOR_NIEBIESKI "\033[1;34m"
+    #define KOLOR_ROZOWY   "\033[1;95m"
+    #define KOLOR_JASNOZIELONY "\033[1;92m"
 
-#define OKNO_WYSOKOSC 40
-#define OKNO_SZEROKOSC 120
+    #define OKNO_WYSOKOSC 40
+    #define OKNO_SZEROKOSC 120
 
-#define PLECAK_MAX_POJEMNOSC 30
-#define MAX_WYSOKOSC 15
-#define MAX_SZEROKOSC 30
+    #define PLECAK_MAX_POJEMNOSC 30
+    #define MAX_WYSOKOSC 15
+    #define MAX_SZEROKOSC 30
 
-#define SLOT_BRON 0
-#define SLOT_TARCZA 1
-#define SLOT_ZBROJA 2
-#define SLOT_ILOSC 3
+    #define SLOT_BRON 0
+    #define SLOT_TARCZA 1
+    #define SLOT_ZBROJA 2
+    #define SLOT_ILOSC 3
 
-#define LEVELUP_XP 100
+    #define LEVELUP_XP 100
 
-#define SZANSA_KUPCA_W_WIOSCE 60
+    #define SZANSA_KUPCA_W_WIOSCE 60
 
-#define LIMIT_LECZENIA 10
+    #define LIMIT_LECZENIA 10
 
-typedef enum {
-    LOKACJA_LAS,
-    LOKACJA_WIOSKA,
-    LOKACJA_JASKINIA,
-    LOKACJA_OBOZ,
-    LOKACJA_POLANA,
-    LOKACJA_RUINY
-} TypLokacji;
+    typedef enum {
+        LOKACJA_LAS,
+        LOKACJA_WIOSKA,
+        LOKACJA_JASKINIA,
+        LOKACJA_OBOZ,
+        LOKACJA_POLANA,
+        LOKACJA_RUINY
+    } TypLokacji;
 
-const char* nazwy_lokacji[] = {
-    "Las",
-    "Wioska",
-    "Jaskinia",
-    "Oboz wrogow",
-    "Polana",
-    "Ruiny"
-};
+    const char* nazwy_lokacji[] = {
+        "Las",
+        "Wioska",
+        "Jaskinia",
+        "Oboz wrogow",
+        "Polana",
+        "Ruiny"
+    };
 
-typedef enum {
-    PUSTE, SCIANA, SKARB, PULAPKA, PRZECIWNIK, BRAMA, SKARB_SPEC
-} TypKomorki;
+    typedef enum {
+        PUSTE, SCIANA, SKARB, PULAPKA, PRZECIWNIK, BRAMA, SKARB_SPEC
+    } TypKomorki;
 
-typedef struct {
-    TypKomorki typ;
-} KomorkaMapy;
+    typedef struct {
+        TypKomorki typ;
+    } KomorkaMapy;
 
-typedef struct {
-    int szerokosc;
-    int wysokosc;
-    KomorkaMapy komorki[MAX_WYSOKOSC][MAX_SZEROKOSC];
-    int czy_jest_kupiec;
-} Mapa;
+    typedef struct {
+        int szerokosc;
+        int wysokosc;
+        KomorkaMapy komorki[MAX_WYSOKOSC][MAX_SZEROKOSC];
+        int czy_jest_kupiec;
+    } Mapa;
 
-typedef enum {
-    PRZEDMIOT_BRON,
-    PRZEDMIOT_TARCZA,
-    PRZEDMIOT_ZBROJA,
-    PRZEDMIOT_LECZENIE,
-    PRZEDMIOT_INNY
-} TypPrzedmiotu;
+    typedef enum {
+        PRZEDMIOT_BRON,
+        PRZEDMIOT_TARCZA,
+        PRZEDMIOT_ZBROJA,
+        PRZEDMIOT_LECZENIE,
+        PRZEDMIOT_INNY
+    } TypPrzedmiotu;
 
-typedef enum {
-    RZAD_ZNISZCZONY,
-    RZAD_ZWYKLY,
-    RZAD_SLABY,
-    RZAD_DOBRY,
-    RZAD_MISTRZ,
-    RZAD_LEG
-} RzadkoscPrzedmiotu;
+    typedef enum {
+        RZAD_ZNISZCZONY,
+        RZAD_ZWYKLY,
+        RZAD_SLABY,
+        RZAD_DOBRY,
+        RZAD_MISTRZ,
+        RZAD_LEG
+    } RzadkoscPrzedmiotu;
 
-typedef enum {
-    QUEST_BRAK,
-    QUEST_ZABIJ_WROGOW,
-    QUEST_WEJDZ_PULAPKI
-} TypQuestu;
+    typedef enum {
+        QUEST_BRAK,
+        QUEST_ZABIJ_WROGOW,
+        QUEST_WEJDZ_PULAPKI
+    } TypQuestu;
 
-typedef struct {
-    TypQuestu typ;
-    int wymagane;
-    int postep;
-    int aktywny;
-    int do_odebrania;
-    int start_wrogow;
-    int start_pulapek;
-} Quest;
+    typedef struct {
+        TypQuestu typ;
+        int wymagane;
+        int postep;
+        int aktywny;
+        int do_odebrania;
+        int start_wrogow;
+        int start_pulapek;
+    } Quest;
 
-typedef struct {
-    int x;
-    int y;
-    int aktywny;
-} NPCQuest;
+    typedef struct {
+        int x;
+        int y;
+        int aktywny;
+    } NPCQuest;
 
-const char* nazwy_rzadkosci[] = {
-    "Zniszczony",
-    "Zwykly",
-    "Slabej jakosci",
-    "Dobrej jakosci",
-    "Mistrzowski",
-    "LEGENDARNY"
-};
+    const char* nazwy_rzadkosci[] = {
+        "Zniszczony",
+        "Zwykly",
+        "Slabej jakosci",
+        "Dobrej jakosci",
+        "Mistrzowski",
+        "LEGENDARNY"
+    };
 
-typedef enum {
-    LECZENIE_ZWYKLE,
-    LECZENIE_HEALER,
-    LECZENIE_MAG
-} TypLeczenia;
+    typedef enum {
+        LECZENIE_ZWYKLE,
+        LECZENIE_HEALER,
+        LECZENIE_MAG
+    } TypLeczenia;
 
-typedef enum {
-    AMULET_SZCZESCIA,
-    AMULET_REGENERACJI,
-    AMULET_MISTRZA,
-    AMULET_LEGENDARNY
-} TypAmuletu;
+    typedef enum {
+        AMULET_SZCZESCIA,
+        AMULET_REGENERACJI,
+        AMULET_MISTRZA,
+        AMULET_LEGENDARNY
+    } TypAmuletu;
 
-typedef struct {
-    char nazwa[50];
-    TypPrzedmiotu typ;
-    RzadkoscPrzedmiotu rzadkosc;
-    int bonus_obrazen;
-    int bonus_odpornosci;
-    int bonus_HP;
-    int bonus_sila;
-    float bonus_szybkosc;
-    int waga;
-    int cena;
-    int leczenie;
-    TypLeczenia typ_leczenia;
-    TypAmuletu typ_amuletu;
-} Przedmiot;
+    typedef struct {
+        char nazwa[50];
+        TypPrzedmiotu typ;
+        RzadkoscPrzedmiotu rzadkosc;
+        int bonus_obrazen;
+        int bonus_odpornosci;
+        int bonus_HP;
+        int bonus_sila;
+        float bonus_szybkosc;
+        int waga;
+        int cena;
+        int leczenie;
+        TypLeczenia typ_leczenia;
+        TypAmuletu typ_amuletu;
+    } Przedmiot;
 
-typedef struct {
-    Przedmiot *items;
-    int count;
-    int capacity;
-    int zajete_miejsce;
-    int max_miejsce;
-} Plecak;
+    typedef struct {
+        Przedmiot *items;
+        int count;
+        int capacity;
+        int zajete_miejsce;
+        int max_miejsce;
+    } Plecak;
 
-typedef struct {
-    char nazwa[32];
-    int HP;
-    int max_HP;
-    int AG;
-    float odp_pancerza;
-    float sila;
-    double mnoznik_hp;
-    int waga;
-    float zasieg_walki;
-    float zasieg_wizji;
-    long int XP;
-    float szybkosc;
-    int pozycjaX;
-    int pozycjaY;
-    Przedmiot* sloty[SLOT_ILOSC];
-    int bonus_HP;
-    int bonus_sila;
-    int bonus_odpornosc;
-    float bonus_szybkosc;
-    int waluta;
-    int poziom;
-    int xp_do_lvlu;
-    int szczescie;
-    int liczba_leczen;
-    int liczba_pulapek;
-    int liczba_wrogow;
-} Postac;
+    typedef struct {
+        char nazwa[32];
+        int HP;
+        int max_HP;
+        int AG;
+        float odp_pancerza;
+        float sila;
+        double mnoznik_hp;
+        int waga;
+        float zasieg_walki;
+        float zasieg_wizji;
+        long int XP;
+        float szybkosc;
+        int pozycjaX;
+        int pozycjaY;
+        Przedmiot* sloty[SLOT_ILOSC];
+        int bonus_HP;
+        int bonus_sila;
+        int bonus_odpornosc;
+        float bonus_szybkosc;
+        int waluta;
+        int poziom;
+        int xp_do_lvlu;
+        int szczescie;
+        int liczba_leczen;
+        int liczba_pulapek;
+        int liczba_wrogow;
+    } Postac;
 
-const char* kolory_rzadkosci[] = {
-    KOLOR_SZARY,
-    KOLOR_WHITE,
-    KOLOR_NIEBIESKI,
-    KOLOR_JASNOZIELONY,
-    KOLOR_ROZOWY,
-    KOLOR_BOLD KOLOR_YELLOW
-};
+    const char* kolory_rzadkosci[] = {
+        KOLOR_SZARY,
+        KOLOR_WHITE,
+        KOLOR_NIEBIESKI,
+        KOLOR_JASNOZIELONY,
+        KOLOR_ROZOWY,
+        KOLOR_BOLD KOLOR_YELLOW
+    };
 
-typedef struct {
-    int x;
-    int y;
-} Pozycja;
+    typedef struct {
+        int x;
+        int y;
+    } Pozycja;
 
 
-void czysc_ekran() {
-#ifdef _WIN32
-    system("cls");
-#else
-    printf("\033[2J\033[H");
-#endif
-}
-
-void init_plecak(Plecak *plecak, int max_miejsce) {
-    plecak->capacity = 8;
-    plecak->items = malloc(plecak->capacity * sizeof(Przedmiot));
-    plecak->count = 0;
-    plecak->zajete_miejsce = 0;
-    plecak->max_miejsce = max_miejsce;
-}
-
-void powieksz_plecak(Plecak *plecak) {
-    plecak->capacity *= 2;
-    plecak->items = realloc(plecak->items, plecak->capacity * sizeof(Przedmiot));
-}
-
-int gracz_ma_legendarny_amulet(Plecak *plecak) {
-    for (int i = 0; i < plecak->count; i++) {
-        Przedmiot *item = &plecak->items[i];
-        if (item->typ == PRZEDMIOT_INNY && item->rzadkosc == RZAD_LEG && strstr(item->nazwa, "Amulet Regeneracji")) {
-            return 1;
-        }
+    void czysc_ekran() {
+    #ifdef _WIN32
+        system("cls");
+    #else
+        printf("\033[2J\033[H");
+    #endif
     }
-    return 0;
-}
 
-int dodaj_do_plecaka(Plecak *plecak, Przedmiot item, Postac* gracz) {
-    if (item.typ == PRZEDMIOT_LECZENIE) {
-        int licznik = 0;
-        for (int i = 0; i < plecak->count; i++)
-            if (plecak->items[i].typ == PRZEDMIOT_LECZENIE) licznik++;
-        if (licznik >= LIMIT_LECZENIA) {
-            printf(KOLOR_RED "Masz juz maksymalna liczbe mikstur leczenia (%d)!\n" KOLOR_RESET, LIMIT_LECZENIA);
-            return 0;
-        }
+    void init_plecak(Plecak *plecak, int max_miejsce) {
+        plecak->capacity = 8;
+        plecak->items = malloc(plecak->capacity * sizeof(Przedmiot));
+        plecak->count = 0;
+        plecak->zajete_miejsce = 0;
+        plecak->max_miejsce = max_miejsce;
     }
-    if (plecak->zajete_miejsce + item.waga > plecak->max_miejsce) {
-        printf(KOLOR_RED "Plecak nie ma miejsca! (waga: %d/%d)\n" KOLOR_RESET, plecak->zajete_miejsce, plecak->max_miejsce);
+
+    void powieksz_plecak(Plecak *plecak) {
+        plecak->capacity *= 2;
+        plecak->items = realloc(plecak->items, plecak->capacity * sizeof(Przedmiot));
+    }
+
+    int gracz_ma_legendarny_amulet(Plecak *plecak) {
+        for (int i = 0; i < plecak->count; i++) {
+            Przedmiot *item = &plecak->items[i];
+            if (item->typ == PRZEDMIOT_INNY && item->rzadkosc == RZAD_LEG && strstr(item->nazwa, "Amulet Regeneracji")) {
+                return 1;
+            }
+        }
         return 0;
     }
-    if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
 
-    if (item.typ == PRZEDMIOT_LECZENIE) {
-        for (int i = plecak->count; i > 0; i--) {
-            plecak->items[i] = plecak->items[i-1];
+    int dodaj_do_plecaka(Plecak *plecak, Przedmiot item, Postac* gracz) {
+        if (item.typ == PRZEDMIOT_LECZENIE) {
+            int licznik = 0;
+            for (int i = 0; i < plecak->count; i++)
+                if (plecak->items[i].typ == PRZEDMIOT_LECZENIE) licznik++;
+            if (licznik >= LIMIT_LECZENIA) {
+                printf(KOLOR_RED "Masz juz maksymalna liczbe mikstur leczenia (%d)!\n" KOLOR_RESET, LIMIT_LECZENIA);
+                return 0;
+            }
         }
-        plecak->items[0] = item;
-    } else {
-        plecak->items[plecak->count] = item;
-    }
-    plecak->count++;
-    plecak->zajete_miejsce += item.waga;
-    if (item.rzadkosc == RZAD_LEG)
-        printf(KOLOR_BOLD KOLOR_YELLOW "LEGENDARNY przedmiot '%s' dodany do plecaka! (waga: %d/%d)\n" KOLOR_RESET, item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
-    else if (item.typ == PRZEDMIOT_LECZENIE)
-        printf(KOLOR_GREEN "Przedmiot leczący '%s' dodany do plecaka! (waga: %d/%d)\n" KOLOR_RESET, item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
-    else
-        printf("Przedmiot '%s' dodany do plecaka (waga: %d/%d).\n", item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
-    return 1;
-}
+        if (plecak->zajete_miejsce + item.waga > plecak->max_miejsce) {
+            printf(KOLOR_RED "Plecak nie ma miejsca! (waga: %d/%d)\n" KOLOR_RESET, plecak->zajete_miejsce, plecak->max_miejsce);
+            return 0;
+        }
+        if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
 
-void usun_z_plecaka(Plecak *plecak, int idx) {
-    if (idx < 0 || idx >= plecak->count) return;
-    plecak->zajete_miejsce -= plecak->items[idx].waga;
-    for (int i = idx; i < plecak->count - 1; i++)
-        plecak->items[i] = plecak->items[i + 1];
-    plecak->count--;
-}
-
-Przedmiot generuj_przedmiot(Postac* gracz) {
-    Przedmiot item;
-    int roll_typ = rand() % 100;
-    int typ;
-    if (roll_typ < 15) typ = 3;         // 15% szans na miksturę
-    else if (roll_typ < 25) typ = 4;    // 10% szans na amulet
-    else typ = rand() % 3;              // 0: broń, 1: tarcza, 2: zbroja
-
-    int szczescie = gracz ? gracz->szczescie : 0;
-    int poziom = gracz ? gracz->poziom : 1;
-
-    int roll = rand() % 100 + szczescie + poziom * 2;
-    if (roll > 98) item.rzadkosc = RZAD_LEG;
-    else if (roll > 92) item.rzadkosc = RZAD_MISTRZ;
-    else if (roll > 80) item.rzadkosc = RZAD_DOBRY;
-    else if (roll > 60) item.rzadkosc = RZAD_SLABY;
-    else if (roll > 30) item.rzadkosc = RZAD_ZWYKLY;
-    else item.rzadkosc = RZAD_ZNISZCZONY;
-
-    float mnoznik = 1.0f;
-    switch (item.rzadkosc) {
-        case RZAD_ZNISZCZONY: mnoznik = 0.5f; break;
-        case RZAD_ZWYKLY:     mnoznik = 1.0f; break;
-        case RZAD_SLABY:      mnoznik = 0.8f; break;
-        case RZAD_DOBRY:      mnoznik = 1.2f + szczescie * 0.01f; break;
-        case RZAD_MISTRZ:     mnoznik = 1.5f + szczescie * 0.01f; break;
-        case RZAD_LEG:        mnoznik = 2.5f + szczescie * 0.02f; break;
-        default:              mnoznik = 1.0f;
+        if (item.typ == PRZEDMIOT_LECZENIE) {
+            for (int i = plecak->count; i > 0; i--) {
+                plecak->items[i] = plecak->items[i-1];
+            }
+            plecak->items[0] = item;
+        } else {
+            plecak->items[plecak->count] = item;
+        }
+        plecak->count++;
+        plecak->zajete_miejsce += item.waga;
+        if (item.rzadkosc == RZAD_LEG)
+            printf(KOLOR_BOLD KOLOR_YELLOW "LEGENDARNY przedmiot '%s' dodany do plecaka! (waga: %d/%d)\n" KOLOR_RESET, item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
+        else if (item.typ == PRZEDMIOT_LECZENIE)
+            printf(KOLOR_GREEN "Przedmiot leczący '%s' dodany do plecaka! (waga: %d/%d)\n" KOLOR_RESET, item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
+        else
+            printf("Przedmiot '%s' dodany do plecaka (waga: %d/%d).\n", item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
+        return 1;
     }
 
-    item.leczenie = 0;
-    item.typ_leczenia = LECZENIE_ZWYKLE;
-    item.typ_amuletu = AMULET_SZCZESCIA;
+    void usun_z_plecaka(Plecak *plecak, int idx) {
+        if (idx < 0 || idx >= plecak->count) return;
+        plecak->zajete_miejsce -= plecak->items[idx].waga;
+        for (int i = idx; i < plecak->count - 1; i++)
+            plecak->items[i] = plecak->items[i + 1];
+        plecak->count--;
+    }
 
-    if (typ == 0) {
-        item.typ = PRZEDMIOT_BRON;
-        if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNY Miecz");
-        else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Miecz Mistrza");
-        else if (item.rzadkosc == RZAD_DOBRY) snprintf(item.nazwa, 50, "Dobry Miecz");
-        else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaby Miecz");
-        else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Miecz");
-        else snprintf(item.nazwa, 50, "Zniszczony Miecz");
-        item.bonus_obrazen = (int)((2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2)) * mnoznik);
-        item.bonus_odpornosci = 0;
-        item.bonus_HP = (int)((item.rzadkosc * 2 + rand() % (2 + item.rzadkosc)) * mnoznik);
-        item.bonus_sila = (int)((item.rzadkosc + rand() % (1 + item.rzadkosc)) * mnoznik);
-        item.bonus_szybkosc = 0.1f * item.rzadkosc * mnoznik;
-        item.waga = 3 + item.rzadkosc;
-        item.cena = (int)((10 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
-    } else if (typ == 1) {
-        item.typ = PRZEDMIOT_TARCZA;
-        if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Tarcza");
-        else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Tarcza Mistrza");
-        else if (item.rzadkosc == RZAD_DOBRY) snprintf(item.nazwa, 50, "Dobra Tarcza");
-        else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaba Tarcza");
-        else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Tarcza");
-        else snprintf(item.nazwa, 50, "Zniszczona Tarcza");
-        item.bonus_odpornosci = (int)((2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2)) * mnoznik);
-        item.bonus_obrazen = 0;
-        item.bonus_HP = (int)((item.rzadkosc * 3 + rand() % (2 + item.rzadkosc)) * mnoznik);
-        item.bonus_sila = 0;
-        item.bonus_szybkosc = -0.05f * item.rzadkosc * mnoznik;
-        item.waga = 4 + item.rzadkosc;
-        item.cena = (int)((12 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
-    } else if (typ == 2) {
-        item.typ = PRZEDMIOT_ZBROJA;
-        if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Zbroja");
-        else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Zbroja Mistrza");
-        else if (item.rzadkosc == RZAD_DOBRY) snprintf(item.nazwa, 50, "Dobra Zbroja");
-        else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaba Zbroja");
-        else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Zbroja");
-        else snprintf(item.nazwa, 50, "Zniszczona Zbroja");
-        item.bonus_odpornosci = (int)((3 + poziom + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2)) * mnoznik);
-        item.bonus_obrazen = 0;
-        item.bonus_HP = (int)((5 + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2)) * mnoznik);
-        item.bonus_sila = 0;
-        item.bonus_szybkosc = -0.1f * item.rzadkosc * mnoznik;
-        item.waga = 5 + item.rzadkosc;
-        item.cena = (int)((15 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
-    } else if (typ == 3) {
-        item.typ = PRZEDMIOT_LECZENIE;
-        int rodzaj = rand() % 3;
-        if (rodzaj == 0) {
-            item.typ_leczenia = LECZENIE_ZWYKLE;
-            snprintf(item.nazwa, 50, "Zwykla Mikstura Leczenia");
-            item.leczenie = (int)((25 + poziom * 2 + item.rzadkosc * 5) * mnoznik);
-        } else if (rodzaj == 1) {
-            item.typ_leczenia = LECZENIE_HEALER;
-            snprintf(item.nazwa, 50, "Mikstura Leczenia Healer'a");
-            item.leczenie = (int)((40 + poziom * 3 + item.rzadkosc * 8) * mnoznik);
-        } else {
-            item.typ_leczenia = LECZENIE_MAG;
-            snprintf(item.nazwa, 50, "Mikstura Leczenia Maga");
-            item.leczenie = (int)((60 + poziom * 4 + item.rzadkosc * 12) * mnoznik);
+    Przedmiot generuj_przedmiot(Postac* gracz) {
+        Przedmiot item;
+        int roll_typ = rand() % 100;
+        int typ;
+        if (roll_typ < 30) typ = 3;         // 30% szans na miksturę
+        else if (roll_typ < 25) typ = 4;    // 10% szans na amulet
+        else typ = rand() % 3;              // 0: broń, 1: tarcza, 2: zbroja
+
+        int szczescie = gracz ? gracz->szczescie : 0;
+        int poziom = gracz ? gracz->poziom : 1;
+
+        int roll = rand() % 100 + szczescie + poziom * 2;
+        if (roll > 98) item.rzadkosc = RZAD_LEG;
+        else if (roll > 92) item.rzadkosc = RZAD_MISTRZ;
+        else if (roll > 80) item.rzadkosc = RZAD_DOBRY;
+        else if (roll > 60) item.rzadkosc = RZAD_SLABY;
+        else if (roll > 30) item.rzadkosc = RZAD_ZWYKLY;
+        else item.rzadkosc = RZAD_ZNISZCZONY;
+
+        float mnoznik = 1.0f;
+        switch (item.rzadkosc) {
+            case RZAD_ZNISZCZONY: mnoznik = 0.5f; break;
+            case RZAD_ZWYKLY:     mnoznik = 1.0f; break;
+            case RZAD_SLABY:      mnoznik = 0.8f; break;
+            case RZAD_DOBRY:      mnoznik = 1.2f + szczescie * 0.01f; break;
+            case RZAD_MISTRZ:     mnoznik = 1.5f + szczescie * 0.01f; break;
+            case RZAD_LEG:        mnoznik = 2.5f + szczescie * 0.02f; break;
+            default:              mnoznik = 1.0f;
         }
-        item.bonus_obrazen = 0;
-        item.bonus_odpornosci = 0;
-        item.bonus_HP = 0;
-        item.bonus_sila = 0;
-        item.bonus_szybkosc = 0.0f;
-        item.waga = 1;
-        item.cena = (int)((10 + item.rzadkosc * 10 + poziom * 2) * mnoznik);
-    } else if (typ == 4) {
-        item.typ = PRZEDMIOT_INNY;
-        int rodzaj = rand() % 4;
-        if (rodzaj == 0) {
-            item.typ_amuletu = AMULET_SZCZESCIA;
-            snprintf(item.nazwa, 50, "Amulet Szczescia");
-            item.bonus_HP = (int)((2 + item.rzadkosc) * mnoznik);
-        } else if (rodzaj == 1) {
-            item.typ_amuletu = AMULET_REGENERACJI;
-            snprintf(item.nazwa, 50, "Amulet Regeneracji");
-            item.bonus_HP = (int)((5 + item.rzadkosc * 2) * mnoznik);
-        } else if (rodzaj == 2) {
-            item.typ_amuletu = AMULET_MISTRZA;
-            snprintf(item.nazwa, 50, "Amulet Mistrza");
-            item.bonus_HP = (int)((10 + item.rzadkosc * 3) * mnoznik);
-        } else {
-            item.typ_amuletu = AMULET_LEGENDARNY;
-            snprintf(item.nazwa, 50, "LEGENDARNY Amulet");
-            item.bonus_HP = (int)((20 + item.rzadkosc * 5) * mnoznik);
-        }
-        item.bonus_obrazen = 0;
-        item.bonus_odpornosci = 0;
-        item.bonus_sila = 0;
-        item.bonus_szybkosc = 0.0f;
-        item.waga = 0;
-        item.cena = (int)((50 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
+
         item.leczenie = 0;
-    }
-    return item;
-}
+        item.typ_leczenia = LECZENIE_ZWYKLE;
+        item.typ_amuletu = AMULET_SZCZESCIA;
 
-/* --- BONUSY --- */
-void zastosuj_bonusy(Postac* postac, Przedmiot *item) {
-    postac->bonus_HP += item->bonus_HP;
-    postac->bonus_sila += item->bonus_sila;
-    postac->bonus_odpornosc += item->bonus_odpornosci;
-    postac->bonus_szybkosc += item->bonus_szybkosc;
-}
-
-void usun_bonusy(Postac* postac, Przedmiot *item) {
-    postac->bonus_HP -= item->bonus_HP;
-    postac->bonus_sila -= item->bonus_sila;
-    postac->bonus_odpornosc -= item->bonus_odpornosci;
-    postac->bonus_szybkosc -= item->bonus_szybkosc;
-}
-
-/* --- SLOTY POSTACI --- */
-void pokaz_zmiany_statystyk(Postac *gracz, Przedmiot *item) {
-    printf("\nZmiany statystyk po zalozeniu przedmiotu:\n");
-    int hp0 = gracz->HP + gracz->bonus_HP;
-    int hp1 = hp0 + item->bonus_HP;
-    int sila0 = gracz->sila + gracz->bonus_sila;
-    int sila1 = sila0 + item->bonus_sila;
-    int odp0 = gracz->odp_pancerza + gracz->bonus_odpornosc;
-    int odp1 = odp0 + item->bonus_odpornosci;
-    float szybkosc0 = gracz->szybkosc + gracz->bonus_szybkosc;
-    float szybkosc1 = szybkosc0 + item->bonus_szybkosc;
-
-    int bron0 = 0, bron1 = 0;
-    if (item->typ == PRZEDMIOT_BRON) {
-        if (gracz->sloty[SLOT_BRON]) bron0 = gracz->sloty[SLOT_BRON]->bonus_obrazen;
-        bron1 = item->bonus_obrazen;
-        printf("Obrazenia: %d -> %d\n", sila0 + bron0, sila1 + bron1);
-    }
-
-    printf("HP: %d -> %d\n", hp0, hp1);
-    printf("Sila: %d -> %d\n", sila0, sila1);
-    printf("Odpornosc: %d -> %d\n", odp0, odp1);
-    printf("Szybkosc: %.2f -> %.2f\n", szybkosc0, szybkosc1);
-}
-
-void wyposaz_przedmiot(Postac *gracz, Plecak *plecak, int indeks) {
-    if (indeks < 0 || indeks >= plecak->count) {
-        printf("Nieprawidlowy indeks.\n");
-        return;
-    }
-    Przedmiot *item = &plecak->items[indeks];
-    int slot = -1;
-    if (item->typ == PRZEDMIOT_BRON) slot = SLOT_BRON;
-    else if (item->typ == PRZEDMIOT_TARCZA) slot = SLOT_TARCZA;
-    else if (item->typ == PRZEDMIOT_ZBROJA) slot = SLOT_ZBROJA;
-
-    if (slot == -1) {
-        printf(KOLOR_RED "Ten przedmiot nie moze byc wyposazony.\n" KOLOR_RESET);
-        printf("Wcisnij ENTER aby kontynuowac...");
-        char linia[16];
-        fgets(linia, sizeof(linia), stdin);
-        return;
-    }
-    printf("\n--- SLOT: %s ---\n", slot == SLOT_BRON ? "Bron" : slot == SLOT_TARCZA ? "Tarcza" : "Zbroja");
-    pokaz_zmiany_statystyk(gracz, item);
-    printf("Chcesz wyposazyc '%s'? (T/N): ", item->nazwa);
-    char odp;
-    scanf(" %c", &odp);
-    int c; while ((c = getchar()) != '\n' && c != EOF) {}
-    if (odp == 'T' || odp == 't') {
-        if (gracz->sloty[slot] != NULL) {
-            usun_bonusy(gracz, gracz->sloty[slot]);
-            if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
-            plecak->items[plecak->count++] = *(gracz->sloty[slot]);
-            plecak->zajete_miejsce += gracz->sloty[slot]->waga;
-            printf(KOLOR_YELLOW "Zdejmujesz '%s' i chowasz do plecaka.\n" KOLOR_RESET, gracz->sloty[slot]->nazwa);
-            free(gracz->sloty[slot]);
-            gracz->sloty[slot] = NULL;
+        if (typ == 0) {
+            item.typ = PRZEDMIOT_BRON;
+            if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNY Miecz");
+            else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Miecz Mistrza");
+            else if (item.rzadkosc == RZAD_DOBRY) snprintf(item.nazwa, 50, "Dobry Miecz");
+            else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaby Miecz");
+            else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Miecz");
+            else snprintf(item.nazwa, 50, "Zniszczony Miecz");
+            item.bonus_obrazen = (int)((2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2)) * mnoznik);
+            item.bonus_odpornosci = 0;
+            item.bonus_HP = (int)((item.rzadkosc * 2 + rand() % (2 + item.rzadkosc)) * mnoznik);
+            item.bonus_sila = (int)((item.rzadkosc + rand() % (1 + item.rzadkosc)) * mnoznik);
+            item.bonus_szybkosc = 0.1f * item.rzadkosc * mnoznik;
+            item.waga = 3 + item.rzadkosc;
+            item.cena = (int)((10 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
+        } else if (typ == 1) {
+            item.typ = PRZEDMIOT_TARCZA;
+            if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Tarcza");
+            else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Tarcza Mistrza");
+            else if (item.rzadkosc == RZAD_DOBRY) snprintf(item.nazwa, 50, "Dobra Tarcza");
+            else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaba Tarcza");
+            else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Tarcza");
+            else snprintf(item.nazwa, 50, "Zniszczona Tarcza");
+            item.bonus_odpornosci = (int)((2 + poziom + item.rzadkosc * 4 + rand() % (2 + item.rzadkosc * 2)) * mnoznik);
+            item.bonus_obrazen = 0;
+            item.bonus_HP = (int)((item.rzadkosc * 3 + rand() % (2 + item.rzadkosc)) * mnoznik);
+            item.bonus_sila = 0;
+            item.bonus_szybkosc = -0.05f * item.rzadkosc * mnoznik;
+            item.waga = 4 + item.rzadkosc;
+            item.cena = (int)((12 + item.rzadkosc * 30 + poziom * 2) * mnoznik);
+        } else if (typ == 2) {
+            item.typ = PRZEDMIOT_ZBROJA;
+            if (item.rzadkosc == RZAD_LEG) snprintf(item.nazwa, 50, "LEGENDARNA Zbroja");
+            else if (item.rzadkosc == RZAD_MISTRZ) snprintf(item.nazwa, 50, "Zbroja Mistrza");
+            else if (item.rzadkosc == RZAD_DOBRY) snprintf(item.nazwa, 50, "Dobra Zbroja");
+            else if (item.rzadkosc == RZAD_SLABY) snprintf(item.nazwa, 50, "Slaba Zbroja");
+            else if (item.rzadkosc == RZAD_ZWYKLY) snprintf(item.nazwa, 50, "Zbroja");
+            else snprintf(item.nazwa, 50, "Zniszczona Zbroja");
+            item.bonus_odpornosci = (int)((3 + poziom + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2)) * mnoznik);
+            item.bonus_obrazen = 0;
+            item.bonus_HP = (int)((5 + item.rzadkosc * 5 + rand() % (3 + item.rzadkosc * 2)) * mnoznik);
+            item.bonus_sila = 0;
+            item.bonus_szybkosc = -0.1f * item.rzadkosc * mnoznik;
+            item.waga = 5 + item.rzadkosc;
+            item.cena = (int)((15 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
+        } else if (typ == 3) {
+            item.typ = PRZEDMIOT_LECZENIE;
+            int rodzaj = rand() % 3;
+            if (rodzaj == 0) {
+                item.typ_leczenia = LECZENIE_ZWYKLE;
+                snprintf(item.nazwa, 50, "Zwykla Mikstura Leczenia");
+                item.leczenie = (int)((25 + poziom * 2 + item.rzadkosc * 5) * mnoznik);
+            } else if (rodzaj == 1) {
+                item.typ_leczenia = LECZENIE_HEALER;
+                snprintf(item.nazwa, 50, "Mikstura Leczenia Healer'a");
+                item.leczenie = (int)((40 + poziom * 3 + item.rzadkosc * 8) * mnoznik);
+            } else {
+                item.typ_leczenia = LECZENIE_MAG;
+                snprintf(item.nazwa, 50, "Mikstura Leczenia Maga");
+                item.leczenie = (int)((60 + poziom * 4 + item.rzadkosc * 12) * mnoznik);
+            }
+            item.bonus_obrazen = 0;
+            item.bonus_odpornosci = 0;
+            item.bonus_HP = 0;
+            item.bonus_sila = 0;
+            item.bonus_szybkosc = 0.0f;
+            item.waga = 1;
+            item.cena = (int)((10 + item.rzadkosc * 10 + poziom * 2) * mnoznik);
+        } else if (typ == 4) {
+            item.typ = PRZEDMIOT_INNY;
+            int rodzaj = rand() % 4;
+            if (rodzaj == 0) {
+                item.typ_amuletu = AMULET_SZCZESCIA;
+                snprintf(item.nazwa, 50, "Amulet Szczescia");
+                item.bonus_HP = (int)((2 + item.rzadkosc) * mnoznik);
+            } else if (rodzaj == 1) {
+                item.typ_amuletu = AMULET_REGENERACJI;
+                snprintf(item.nazwa, 50, "Amulet Regeneracji");
+                item.bonus_HP = (int)((5 + item.rzadkosc * 2) * mnoznik);
+            } else if (rodzaj == 2) {
+                item.typ_amuletu = AMULET_MISTRZA;
+                snprintf(item.nazwa, 50, "Amulet Mistrza");
+                item.bonus_HP = (int)((10 + item.rzadkosc * 3) * mnoznik);
+            } else {
+                item.typ_amuletu = AMULET_LEGENDARNY;
+                snprintf(item.nazwa, 50, "LEGENDARNY Amulet");
+                item.bonus_HP = (int)((20 + item.rzadkosc * 5) * mnoznik);
+            }
+            item.bonus_obrazen = 0;
+            item.bonus_odpornosci = 0;
+            item.bonus_sila = 0;
+            item.bonus_szybkosc = 0.0f;
+            item.waga = 0;
+            item.cena = (int)((50 + item.rzadkosc * 40 + poziom * 2) * mnoznik);
+            item.leczenie = 0;
         }
-        gracz->sloty[slot] = malloc(sizeof(Przedmiot));
-        *(gracz->sloty[slot]) = *item;
-        zastosuj_bonusy(gracz, item);
-        printf("Wyposazono: %s\n", item->nazwa);
-        usun_z_plecaka(plecak, indeks);
-    } else {
-        printf("Przedmiot pozostaje w plecaku.\n");
+        return item;
     }
-}
 
-void uzyj_leczenie(Postac *gracz, Plecak *plecak, int idx) {
-    if (idx < 0 || idx >= plecak->count) return;
-    Przedmiot *item = &plecak->items[idx];
-    if (item->typ != PRZEDMIOT_LECZENIE) {
-        printf("To nie jest przedmiot leczący!\n");
-        return;
+    /* --- BONUSY --- */
+    void zastosuj_bonusy(Postac* postac, Przedmiot *item) {
+        postac->bonus_HP += item->bonus_HP;
+        postac->bonus_sila += item->bonus_sila;
+        postac->bonus_odpornosc += item->bonus_odpornosci;
+        postac->bonus_szybkosc += item->bonus_szybkosc;
     }
-    int max_hp = gracz->max_HP + gracz->bonus_HP;
-    int przed = gracz->HP;
-    int ile_brakuje = max_hp - gracz->HP;
-    if (ile_brakuje <= 0) {
-        printf("Masz już pełne zdrowie!\n");
-        return;
+
+    void usun_bonusy(Postac* postac, Przedmiot *item) {
+        postac->bonus_HP -= item->bonus_HP;
+        postac->bonus_sila -= item->bonus_sila;
+        postac->bonus_odpornosc -= item->bonus_odpornosci;
+        postac->bonus_szybkosc -= item->bonus_szybkosc;
     }
-    if (item->leczenie > ile_brakuje) {
-        printf(KOLOR_YELLOW "Eliksir leczy %d HP, ale brakuje Ci tylko %d HP.\n" KOLOR_RESET, item->leczenie, ile_brakuje);
-        printf("Czy na pewno chcesz go użyć? (T/N): ");
-        char odp[8];
-        fgets(odp, sizeof(odp), stdin);
-        if (odp[0] != 'T' && odp[0] != 't') {
-            printf("Anulowano użycie eliksiru.\n");
+
+    /* --- SLOTY POSTACI --- */
+    void pokaz_zmiany_statystyk(Postac *gracz, Przedmiot *item) {
+        printf("\nZmiany statystyk po zalozeniu przedmiotu:\n");
+        int hp0 = gracz->HP + gracz->bonus_HP;
+        int hp1 = hp0 + item->bonus_HP;
+        int sila0 = gracz->sila + gracz->bonus_sila;
+        int sila1 = sila0 + item->bonus_sila;
+        int odp0 = gracz->odp_pancerza + gracz->bonus_odpornosc;
+        int odp1 = odp0 + item->bonus_odpornosci;
+        float szybkosc0 = gracz->szybkosc + gracz->bonus_szybkosc;
+        float szybkosc1 = szybkosc0 + item->bonus_szybkosc;
+
+        int bron0 = 0, bron1 = 0;
+        if (item->typ == PRZEDMIOT_BRON) {
+            if (gracz->sloty[SLOT_BRON]) bron0 = gracz->sloty[SLOT_BRON]->bonus_obrazen;
+            bron1 = item->bonus_obrazen;
+            printf("Obrazenia: %d -> %d\n", sila0 + bron0, sila1 + bron1);
+        }
+
+        printf("HP: %d -> %d\n", hp0, hp1);
+        printf("Sila: %d -> %d\n", sila0, sila1);
+        printf("Odpornosc: %d -> %d\n", odp0, odp1);
+        printf("Szybkosc: %.2f -> %.2f\n", szybkosc0, szybkosc1);
+    }
+
+    void wyposaz_przedmiot(Postac *gracz, Plecak *plecak, int indeks) {
+        if (indeks < 0 || indeks >= plecak->count) {
+            printf("Nieprawidlowy indeks.\n");
             return;
         }
-    }
-    gracz->HP += item->leczenie;
-    if (gracz->HP > max_hp)
-        gracz->HP = max_hp;
-    printf(KOLOR_GREEN "Uzywasz %s i leczysz sie o %d HP! (HP: %d -> %d)\n" KOLOR_RESET, item->nazwa, item->leczenie, przed, gracz->HP);
-    usun_z_plecaka(plecak, idx);
-}
+        Przedmiot *item = &plecak->items[indeks];
+        int slot = -1;
+        if (item->typ == PRZEDMIOT_BRON) slot = SLOT_BRON;
+        else if (item->typ == PRZEDMIOT_TARCZA) slot = SLOT_TARCZA;
+        else if (item->typ == PRZEDMIOT_ZBROJA) slot = SLOT_ZBROJA;
 
-/* --- PLECAK I SLOTY - INTERFEJS --- */
-void przegladaj_plecak(Plecak *plecak, Postac *gracz, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
-    while (1) {
-        czysc_ekran();
-        printf(KOLOR_BOLD KOLOR_CYAN "\n=== SLOTY POSTACI ===\n" KOLOR_RESET);
+        if (slot == -1) {
+            printf(KOLOR_RED "Ten przedmiot nie moze byc wyposazony.\n" KOLOR_RESET);
+            printf("Wcisnij ENTER aby kontynuowac...");
+            char linia[16];
+            fgets(linia, sizeof(linia), stdin);
+            return;
+        }
+        printf("\n--- SLOT: %s ---\n", slot == SLOT_BRON ? "Bron" : slot == SLOT_TARCZA ? "Tarcza" : "Zbroja");
+        pokaz_zmiany_statystyk(gracz, item);
+        printf("Chcesz wyposazyc '%s'? (T/N): ", item->nazwa);
+        char odp;
+        scanf(" %c", &odp);
+        int c; while ((c = getchar()) != '\n' && c != EOF) {}
+        if (odp == 'T' || odp == 't') {
+            if (gracz->sloty[slot] != NULL) {
+                usun_bonusy(gracz, gracz->sloty[slot]);
+                if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
+                plecak->items[plecak->count++] = *(gracz->sloty[slot]);
+                plecak->zajete_miejsce += gracz->sloty[slot]->waga;
+                printf(KOLOR_YELLOW "Zdejmujesz '%s' i chowasz do plecaka.\n" KOLOR_RESET, gracz->sloty[slot]->nazwa);
+                free(gracz->sloty[slot]);
+                gracz->sloty[slot] = NULL;
+            }
+            gracz->sloty[slot] = malloc(sizeof(Przedmiot));
+            *(gracz->sloty[slot]) = *item;
+            zastosuj_bonusy(gracz, item);
+            printf("Wyposazono: %s\n", item->nazwa);
+            usun_z_plecaka(plecak, indeks);
+        } else {
+            printf("Przedmiot pozostaje w plecaku.\n");
+        }
+    }
+
+    void uzyj_leczenie(Postac *gracz, Plecak *plecak, int idx) {
+        if (idx < 0 || idx >= plecak->count) return;
+        Przedmiot *item = &plecak->items[idx];
+        if (item->typ != PRZEDMIOT_LECZENIE) {
+            printf("To nie jest przedmiot leczący!\n");
+            return;
+        }
+        int max_hp = gracz->max_HP + gracz->bonus_HP;
+        int przed = gracz->HP;
+        int ile_brakuje = max_hp - gracz->HP;
+        if (ile_brakuje <= 0) {
+            printf("Masz już pełne zdrowie!\n");
+            return;
+        }
+        if (item->leczenie > ile_brakuje) {
+            printf(KOLOR_YELLOW "Eliksir leczy %d HP, ale brakuje Ci tylko %d HP.\n" KOLOR_RESET, item->leczenie, ile_brakuje);
+            printf("Czy na pewno chcesz go użyć? (T/N): ");
+            char odp[8];
+            fgets(odp, sizeof(odp), stdin);
+            if (odp[0] != 'T' && odp[0] != 't') {
+                printf("Anulowano użycie eliksiru.\n");
+                return;
+            }
+        }
+        gracz->HP += item->leczenie;
+        if (gracz->HP > max_hp)
+            gracz->HP = max_hp;
+        printf(KOLOR_GREEN "Uzywasz %s i leczysz sie o %d HP! (HP: %d -> %d)\n" KOLOR_RESET, item->nazwa, item->leczenie, przed, gracz->HP);
+        usun_z_plecaka(plecak, idx);
+    }
+
+    void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest);
+
+    /* --- PLECAK I SLOTY - INTERFEJS --- */
+    void przegladaj_plecak(Plecak *plecak, Postac *gracz, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
+        while (1) {
+            czysc_ekran();
+            printf(KOLOR_BOLD KOLOR_CYAN "\n=== SLOTY POSTACI ===\n" KOLOR_RESET);
+            for (int i = 0; i < SLOT_ILOSC; i++) {
+                if (gracz->sloty[i]) {
+                    printf("%s: ", i == SLOT_BRON ? "Bron" : i == SLOT_TARCZA ? "Tarcza" : "Zbroja");
+                    if (gracz->sloty[i]->rzadkosc == RZAD_LEG)
+                        printf(KOLOR_BOLD KOLOR_YELLOW "%s" KOLOR_RESET "\n", gracz->sloty[i]->nazwa);
+                    else
+                        printf("%s\n", gracz->sloty[i]->nazwa);
+                } else {
+                    printf("%s: brak\n", i == SLOT_BRON ? "Bron" : i == SLOT_TARCZA ? "Tarcza" : "Zbroja");
+                }
+            }
+            printf(KOLOR_BOLD KOLOR_CYAN "\n=== PLECAK (waga: %d/%d) ===\n" KOLOR_RESET, plecak->zajete_miejsce, plecak->max_miejsce);
+            if (plecak->count == 0) {
+                printf("Plecak jest pusty.\n");
+            } else {
+                for (int i = 0; i < plecak->count; i++) {
+                    Przedmiot *item = &plecak->items[i];
+                    printf("%s", kolory_rzadkosci[item->rzadkosc]);
+                    printf("%d: %s (%s", i, item->nazwa,
+                        item->rzadkosc == RZAD_LEG ? "LEGENDARNY, " : "");
+                    switch (item->typ) {
+                        case PRZEDMIOT_BRON: printf("Bron"); break;
+                        case PRZEDMIOT_TARCZA: printf("Tarcza"); break;
+                        case PRZEDMIOT_ZBROJA: printf("Zbroja"); break;
+                        case PRZEDMIOT_LECZENIE: printf("Leczenie"); break;
+                        case PRZEDMIOT_INNY: printf("Amulet"); break;
+                        default: printf("Inny");
+                    }
+                    printf(", waga: %d, cena: %d", item->waga, item->cena);
+                    if (item->bonus_obrazen) printf(", obrazenia: %d", item->bonus_obrazen);
+                    if (item->bonus_odpornosci) printf(", odpornosc: %d", item->bonus_odpornosci);
+                    if (item->bonus_HP) printf(", HP: %d", item->bonus_HP);
+                    if (item->bonus_sila) printf(", sila: %d", item->bonus_sila);
+                    if (item->bonus_szybkosc) printf(", szybkosc: %.2f", item->bonus_szybkosc);
+                    if (item->typ == PRZEDMIOT_LECZENIE) printf(", leczenie: %d", item->leczenie);
+                    if (item->typ == PRZEDMIOT_INNY) {
+                        if (item->rzadkosc == RZAD_LEG)
+                            printf(KOLOR_MAGENTA " | Amulet Regeneracji: +10 HP, po walce leczy 10HP, po pulapce 5HP" KOLOR_RESET);
+                        else
+                            printf(KOLOR_MAGENTA " | Amulet: +5 HP, nie zajmuje miejsca w plecaku" KOLOR_RESET);
+                    }
+                    printf(")" KOLOR_RESET "\n");
+                }
+            }
+            printf("\nWybierz nr przedmiotu do wyposazenia/uzycia (q aby wyjsc, L <nr> aby uzyc leczenie, W <nr> aby wyrzucic, Z <slot> aby zdjac przedmiot ze slotu): "); //aby zjadc przedmiot to np Z 0 (od 0 do 2)
+            char linia[32];
+            fgets(linia, sizeof(linia), stdin);
+            int wybor;
+            if (linia[0] == 'q' || linia[0] == 'Q') break;
+            if (strncmp(linia, "ZAPISZ", 6) == 0 || strncmp(linia, "zapisz", 6) == 0) {
+                zapisz_gre(gracz, plecak, typ_lokacji, mapa, npc_quest);
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+                continue;
+            }
+            if (sscanf(linia, "L %d", &wybor) == 1) {
+                uzyj_leczenie(gracz, plecak, wybor);
+            } else if ((sscanf(linia, "W %d", &wybor) == 1) || (sscanf(linia, "w %d", &wybor) == 1)) {
+                if (wybor >= 0 && wybor < plecak->count) {
+                    printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
+                    usun_z_plecaka(plecak, wybor);
+                    printf("Wcisnij ENTER aby kontynuowac...");
+                    fgets(linia, sizeof(linia), stdin);
+                }
+            } else if (sscanf(linia, "Z %d", &wybor) == 1) {
+                // Zdejmowanie przedmiotu ze slotu (0-Bron, 1-Tarcza, 2-Zbroja)
+                if (wybor >= 0 && wybor < SLOT_ILOSC && gracz->sloty[wybor]) {
+                    if (plecak->zajete_miejsce + gracz->sloty[wybor]->waga > plecak->max_miejsce) {
+                        printf(KOLOR_RED "Brak miejsca w plecaku na zdjęcie przedmiotu!\n" KOLOR_RESET);
+                    } else {
+                        usun_bonusy(gracz, gracz->sloty[wybor]);
+                        if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
+                        plecak->items[plecak->count++] = *(gracz->sloty[wybor]);
+                        plecak->zajete_miejsce += gracz->sloty[wybor]->waga;
+                        printf(KOLOR_YELLOW "Zdejmujesz '%s' i chowasz do plecaka.\n" KOLOR_RESET, gracz->sloty[wybor]->nazwa);
+                        free(gracz->sloty[wybor]);
+                        gracz->sloty[wybor] = NULL;
+                    }
+                    printf("Wcisnij ENTER aby kontynuowac...");
+                    fgets(linia, sizeof(linia), stdin);
+                }
+            } else if (sscanf(linia, "%d", &wybor) == 1) {
+                if (wybor >= 0 && wybor < plecak->count) {
+                    if (plecak->items[wybor].typ == PRZEDMIOT_LECZENIE)
+                        uzyj_leczenie(gracz, plecak, wybor);
+                    else
+                        wyposaz_przedmiot(gracz, plecak, wybor);
+                }
+            }
+        }
+    }
+
+    /* --- GENEROWANIE MAPY --- */
+    void generuj_mape(Mapa* mapa, TypLokacji typ_lokacji) {
+        switch (typ_lokacji) {
+            case LOKACJA_LAS:
+                mapa->szerokosc = 20;
+                mapa->wysokosc = 10;
+                break;
+            case LOKACJA_WIOSKA:
+                mapa->szerokosc = 15;
+                mapa->wysokosc = 8;
+                mapa->czy_jest_kupiec = 1; // ZAWSZE jest kupiec w wiosce
+                break;
+            case LOKACJA_JASKINIA:
+                mapa->szerokosc = 12;
+                mapa->wysokosc = 7;
+                break;
+            case LOKACJA_OBOZ:
+                mapa->szerokosc = 10;
+                mapa->wysokosc = 6;
+                break;
+            case LOKACJA_POLANA:
+                mapa->szerokosc = 18;
+                mapa->wysokosc = 8;
+                break;
+            case LOKACJA_RUINY:
+                mapa->szerokosc = 13;
+                mapa->wysokosc = 7;
+                break;
+            default:
+                mapa->szerokosc = 12;
+                mapa->wysokosc = 8;
+        }
+        if (typ_lokacji == LOKACJA_WIOSKA)
+            mapa->czy_jest_kupiec = (rand() % 100 < 85) ? 1 : 0; // 85% szans na kupca
+        else
+            mapa->czy_jest_kupiec = 0;
+
+        for (int y = 0; y < mapa->wysokosc; y++) {
+            for (int x = 0; x < mapa->szerokosc; x++) {
+                int wartosc_losowa = rand() % 100;
+                if (wartosc_losowa < 30)
+                    mapa->komorki[y][x].typ = SCIANA;
+                else if (wartosc_losowa < 34) // mniej pułapek
+                    mapa->komorki[y][x].typ = PULAPKA;
+                else if (wartosc_losowa < 38) // mniej przeciwników
+                    mapa->komorki[y][x].typ = PRZECIWNIK;
+                else
+                    mapa->komorki[y][x].typ = PUSTE;
+            }
+        }
+        int liczba_skarbow = 1;
+        int dodaj_specjalny = 0;
+        if (typ_lokacji == LOKACJA_WIOSKA || typ_lokacji == LOKACJA_OBOZ) {
+            liczba_skarbow = 2;
+            dodaj_specjalny = 1;
+        }
+        for (int i = 0; i < liczba_skarbow; i++) {
+            int skarbX, skarbY;
+            do {
+                skarbX = rand() % mapa->szerokosc;
+                skarbY = rand() % mapa->wysokosc;
+            } while (mapa->komorki[skarbY][skarbX].typ != PUSTE);
+            if (dodaj_specjalny && i == liczba_skarbow - 1)
+                mapa->komorki[skarbY][skarbX].typ = SKARB_SPEC;
+            else
+                mapa->komorki[skarbY][skarbX].typ = SKARB;
+        }
+
+        // --- GWARANCJA BRAMY ---
+        int bramaX = -1, bramaY = -1;
+        // Najpierw szukaj pustego pola
+        for (int i = 0; i < 100; i++) {
+            int x = rand() % mapa->szerokosc;
+            int y = rand() % mapa->wysokosc;
+            if (mapa->komorki[y][x].typ == PUSTE) {
+                bramaX = x;
+                bramaY = y;
+                break;
+            }
+        }
+        // Jeśli nie ma pustego pola, zamień losowe pole nie-ściana na bramę
+        if (bramaX == -1) {
+            for (int i = 0; i < 100; i++) {
+                int x = rand() % mapa->szerokosc;
+                int y = rand() % mapa->wysokosc;
+                if (mapa->komorki[y][x].typ != SCIANA) {
+                    bramaX = x;
+                    bramaY = y;
+                    break;
+                }
+            }
+        }
+        if (bramaX != -1 && bramaY != -1) {
+            mapa->komorki[bramaY][bramaX].typ = BRAMA;
+        }
+    }
+
+    /* --- MAPA I RYSOWANIE --- */
+    void rysuj_legenda(Mapa* mapa, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
+        printf(KOLOR_BOLD KOLOR_MAGENTA "LEGENDA MAPY:\n" KOLOR_RESET);
+        printf(". - puste pole\n");
+        printf(KOLOR_WHITE "#" KOLOR_RESET " - sciana\n");
+        printf(KOLOR_YELLOW "S" KOLOR_RESET " - skarb (zdobywasz 50 XP)\n");
+        printf(KOLOR_YELLOW "$" KOLOR_RESET " - specjalny skarb (moze byc pusty, ale daje lepsze przedmioty)\n");
+        printf(KOLOR_RED "T" KOLOR_RESET " - pulapka (tracisz 10 HP i zyskujesz 1 szczescia)\n");
+        printf(KOLOR_RED "P" KOLOR_RESET " - przeciwnik (walka)\n");
+        printf(KOLOR_CYAN "B" KOLOR_RESET " - brama (przejscie na kolejny poziom – mapa generowana na nowo)\n");
+        printf(KOLOR_GREEN "@" KOLOR_RESET " - Twoja postac\n");
+        if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec)
+            printf(KOLOR_BOLD KOLOR_YELLOW "K" KOLOR_RESET " - Kupiec (sklep)\n");
+        printf(KOLOR_MAGENTA "Q" KOLOR_RESET " - NPC z zadaniem (losowa pozycja w wiosce)\n");
+        printf("---------------------------------\n\n");
+    }
+
+    void rysuj_mape(Mapa* mapa, int graczX, int graczY, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
+        printf("   +");
+        for (int x = 0; x < mapa->szerokosc; x++) printf("--");
+        printf("+  [%s]\n", nazwy_lokacji[typ_lokacji]);
+        printf("   ");
+        for (int x = 0; x < mapa->szerokosc; x++) {
+            printf("%2d", x);
+        }
+        printf("\n");
+        printf("   +");
+        for (int x = 0; x < mapa->szerokosc; x++) printf("--");
+        printf("+\n");
+
+        for (int y = 0; y < mapa->wysokosc; y++) {
+            printf("%2d |", y);
+            for (int x = 0; x < mapa->szerokosc; x++) {
+                if (x == graczX && y == graczY) {
+                    printf(KOLOR_GREEN " @" KOLOR_RESET);
+                } else if (typ_lokacji == LOKACJA_WIOSKA && npc_quest && npc_quest->aktywny && x == npc_quest->x && y == npc_quest->y) {
+                    printf(KOLOR_MAGENTA " Q" KOLOR_RESET);
+                } else if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec && x == 0 && y == 0) {
+                    printf(KOLOR_BOLD KOLOR_YELLOW " K" KOLOR_RESET);
+                } else {
+                    switch (mapa->komorki[y][x].typ) {
+                        case PUSTE:      printf("\033[1;32m  \033[0m"); break;
+                        case SCIANA:     printf(KOLOR_WHITE " #" KOLOR_RESET); break;
+                        case SKARB:      printf(KOLOR_YELLOW " S" KOLOR_RESET); break;
+                        case SKARB_SPEC: printf(KOLOR_YELLOW " $" KOLOR_RESET); break;
+                        case PULAPKA:    printf(KOLOR_RED " T" KOLOR_RESET); break;      // zamiast T dac \033[1;32m  \033[0m
+                        case PRZECIWNIK: printf(KOLOR_RED " P" KOLOR_RESET); break;
+                        case BRAMA:      printf(KOLOR_CYAN " B" KOLOR_RESET); break;
+                        default:         printf("  ");
+                    }
+                }
+            }
+            printf(" |\n");
+        }
+        printf("   +");
+        for (int x = 0; x < mapa->szerokosc; x++) printf("--");
+        printf("+\n");
+    }
+
+    /* --- BFS --- */
+    int is_map_traversable(Mapa* mapa, int startX, int startY) {
+        int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
+        Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
+        int head = 0, tail = 0;
+        queue[tail++] = (Pozycja){startX, startY};
+        visited[startY][startX] = 1;
+        int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
+        while (head < tail) {
+            Pozycja current = queue[head++];
+            if (mapa->komorki[current.y][current.x].typ == BRAMA)
+                return 1;
+            for (int i = 0; i < 4; i++) {
+                int nx = current.x + directions[i][0];
+                int ny = current.y + directions[i][1];
+                if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                    if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
+                        visited[ny][nx] = 1;
+                        queue[tail++] = (Pozycja){nx, ny};
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    int is_skarb_dostepny(Mapa* mapa, int startX, int startY) {
+        int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
+        Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
+        int head = 0, tail = 0;
+        queue[tail++] = (Pozycja){startX, startY};
+        visited[startY][startX] = 1;
+        int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
+        while (head < tail) {
+            Pozycja current = queue[head++];
+            if (mapa->komorki[current.y][current.x].typ == SKARB ||
+                mapa->komorki[current.y][current.x].typ == SKARB_SPEC)
+                return 1;
+            for (int i = 0; i < 4; i++) {
+                int nx = current.x + directions[i][0];
+                int ny = current.y + directions[i][1];
+                if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                    if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
+                        visited[ny][nx] = 1;
+                        queue[tail++] = (Pozycja){nx, ny};
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    void generuj_przechodna_mape(Mapa* mapa, TypLokacji* typ_lokacji) {
+        *typ_lokacji = rand() % 6;
+        do {
+            generuj_mape(mapa, *typ_lokacji);
+            mapa->komorki[1][1].typ = PUSTE;
+        } while (!is_map_traversable(mapa, 1, 1) || !is_skarb_dostepny(mapa, 1, 1));
+    }
+
+    int czy_npc_dostepny(Mapa* mapa, int startX, int startY, int npcX, int npcY) {
+        int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
+        Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
+        int head = 0, tail = 0;
+        queue[tail++] = (Pozycja){startX, startY};
+        visited[startY][startX] = 1;
+        int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
+        while (head < tail) {
+            Pozycja current = queue[head++];
+            if (current.x == npcX && current.y == npcY)
+                return 1;
+            for (int i = 0; i < 4; i++) {
+                int nx = current.x + directions[i][0];
+                int ny = current.y + directions[i][1];
+                if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                    if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
+                        visited[ny][nx] = 1;
+                        queue[tail++] = (Pozycja){nx, ny};
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    void losuj_pozycje_npc(Mapa* mapa, NPCQuest* npc_quest) {
+        int x, y;
+        do {
+            x = rand() % mapa->szerokosc;
+            y = rand() % mapa->wysokosc;
+        } while (mapa->komorki[y][x].typ == SCIANA || mapa->komorki[y][x].typ == BRAMA
+                || (x == 0 && y == 0 && mapa->czy_jest_kupiec)
+                || !czy_npc_dostepny(mapa, 1, 1, x, y));
+        npc_quest->x = x;
+        npc_quest->y = y;
+        npc_quest->aktywny = 1;
+    }
+
+    // --- Funkcja do generowania questa ---
+    void generuj_questa(Quest *quest, Postac *gracz) {
+        TypQuestu poprzedni = quest->typ;
+        TypQuestu nowy;
+        do {
+            nowy = (rand() % 2) ? QUEST_ZABIJ_WROGOW : QUEST_WEJDZ_PULAPKI;
+        } while (nowy == poprzedni && poprzedni != QUEST_BRAK);
+        quest->typ = nowy;
+        if (quest->typ == QUEST_ZABIJ_WROGOW) {
+            quest->wymagane = 5 + rand() % 6;
+            printf("Zadanie: Pokonaj %d przeciwnikow!\n", quest->wymagane);
+        } else if (quest->typ == QUEST_WEJDZ_PULAPKI) {
+            quest->wymagane = 3 + rand() % 4;
+            printf("Zadanie: Wejdz w %d pulapek!\n", quest->wymagane);
+        }
+        quest->postep = 0;
+        quest->aktywny = 1;
+        quest->do_odebrania = 1;
+        quest->start_wrogow = gracz->liczba_wrogow;
+        quest->start_pulapek = gracz->liczba_pulapek;
+    }
+
+    // --- Dialog z NPC ---
+    void dialog_npc(Postac *gracz, Quest *quest, Plecak *plecak) {
+        while (1) {
+            czysc_ekran();
+            printf(KOLOR_BOLD KOLOR_MAGENTA "NPC od zadan\n" KOLOR_RESET);
+            printf("1. Zapytaj o questa\n");
+            printf("2. Odbierz nagrode za wykonane zadanie\n");
+            printf("3. Zrezygnuj z questa\n");
+            printf("q. Wyjdz\n");
+            char linia[16];
+            fgets(linia, sizeof(linia), stdin);
+            if (linia[0] == 'q' || linia[0] == 'Q') break;
+            int wybor = atoi(linia);
+            if (wybor == 1) {
+                if (!quest->aktywny && !quest->do_odebrania) {
+                    generuj_questa(quest, gracz);
+                    printf("Nowe zadanie przyjete!\n");
+                } else if (quest->aktywny) {
+                    printf("Aktualne zadanie: ");
+                    if (quest->typ == QUEST_ZABIJ_WROGOW)
+                        printf("Pokonaj %d przeciwnikow (postep: %d/%d)\n", quest->wymagane, gracz->liczba_wrogow - quest->start_wrogow, quest->wymagane);
+                    else if (quest->typ == QUEST_WEJDZ_PULAPKI)
+                        printf("Wejdz w %d pulapek (postep: %d/%d)\n", quest->wymagane, gracz->liczba_pulapek - quest->start_pulapek, quest->wymagane);
+                    } else if (quest->do_odebrania) {
+                    printf("Masz ukonczone zadanie! Odbierz nagrode.\n");
+                }
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+                    } else if (wybor == 2) {
+                int ukonczone = 0;
+                if (quest->aktywny) {
+                    if ((quest->typ == QUEST_ZABIJ_WROGOW && (gracz->liczba_wrogow - quest->start_wrogow) >= quest->wymagane) ||
+                        (quest->typ == QUEST_WEJDZ_PULAPKI && (gracz->liczba_pulapek - quest->start_pulapek) >= quest->wymagane)) {
+                        ukonczone = 1;
+                    }
+                }
+                if (ukonczone) {
+                    printf(KOLOR_GREEN "Gratulacje! Zadanie wykonane!\n" KOLOR_RESET);
+                    int nagroda_waluta = 30 + rand() % 41; // 30-70 waluty
+                    gracz->waluta += nagroda_waluta;
+                    printf("Otrzymujesz %d waluty!\n", nagroda_waluta);
+                    Przedmiot nagroda = generuj_przedmiot(gracz);
+                    dodaj_do_plecaka(plecak, nagroda, gracz);
+                    // Szansa na powiększenie plecaka
+                    if (rand() % 30 == 0) {
+                        plecak->max_miejsce += 5;
+                        printf(KOLOR_BOLD KOLOR_YELLOW "Twój plecak powiększa się o 5!\n" KOLOR_RESET);
+                    }
+                    quest->aktywny = 0;
+                    quest->do_odebrania = 0;
+                    quest->typ = QUEST_BRAK;
+                    printf("Wcisnij ENTER aby kontynuowac...");
+                    fgets(linia, sizeof(linia), stdin);
+                    break;
+                } else {
+                    printf("Nie ukonczyles jeszcze zadania!\n");
+                    printf("Wcisnij ENTER aby kontynuowac...");
+                    fgets(linia, sizeof(linia), stdin);
+                }
+            }
+            else if (wybor == 3) {
+                if (quest->aktywny) {
+                    printf("Zrezygnowales z questa. Nowe zadanie mozesz wziac u kolejnego NPC.\n");
+                    quest->aktywny = 0;
+                    quest->do_odebrania = 0;
+                    quest->typ = QUEST_BRAK;
+                } else {
+                    printf("Nie masz aktywnego questa.\n");
+                }
+                printf("Wcisnij ENTER aby kontynuowac...");
+                fgets(linia, sizeof(linia), stdin);
+                break;
+            }
+        }
+    }
+
+    /* --- KUPIEC --- */
+    void sklep(Postac *gracz, Plecak *plecak) {
+        while (1) {
+            printf(KOLOR_BOLD KOLOR_MAGENTA "\n=== KUPIEC ===\n" KOLOR_RESET);
+            printf("Twoja waluta: %d\n", gracz->waluta);
+            printf("1. Sprzedaj przedmiot z plecaka\n");
+            printf("2. Kup LEGENDARNY przedmiot\n");
+            printf("3. Powieksz plecak o 10 (koszt: 100 waluty)\n");
+            printf("q. Wyjdz\n");
+            char linia[16];
+            fgets(linia, sizeof(linia), stdin);
+            if (linia[0] == 'q' || linia[0] == 'Q') break;
+            int wybor = atoi(linia);
+            if (wybor == 1) {
+                if (plecak->count == 0) {
+                    printf("Nie masz nic do sprzedania.\n");
+                    continue;
+                }
+                for (int i = 0; i < plecak->count; i++) {
+                    printf("%d: %s (cena: %d)\n", i, plecak->items[i].nazwa, plecak->items[i].cena);
+                }
+                printf("Wybierz nr przedmiotu do sprzedania (q aby anulowac): ");
+                fgets(linia, sizeof(linia), stdin);
+                if (linia[0] == 'q' || linia[0] == 'Q') continue;
+                int idx = atoi(linia);
+                if (idx >= 0 && idx < plecak->count) {
+                    printf("Na pewno chcesz sprzedac %s za %d waluty? (T/N): ", plecak->items[idx].nazwa, plecak->items[idx].cena);
+                    char potw[8];
+                    fgets(potw, sizeof(potw), stdin);
+                    if (potw[0] == 'T' || potw[0] == 't') {
+                        printf("Sprzedano %s za %d waluty!\n", plecak->items[idx].nazwa, plecak->items[idx].cena);
+                        gracz->waluta += plecak->items[idx].cena;
+                        usun_z_plecaka(plecak, idx);
+                    } else {
+                        printf("Anulowano sprzedaz.\n");
+                    }
+                }
+            } else if (wybor == 2) {
+        printf("Dostepne LEGENDARNE przedmioty:\n");
+        Przedmiot legendarne[3];
+
+        // Miecz
+        snprintf(legendarne[0].nazwa, 50, "EXCALIBUR");
+        legendarne[0].typ = PRZEDMIOT_BRON;
+        legendarne[0].rzadkosc = RZAD_LEG;
+        legendarne[0].bonus_obrazen = 50;
+        legendarne[0].bonus_odpornosci = 0;
+        legendarne[0].bonus_HP = 20;
+        legendarne[0].bonus_sila = 10;
+        legendarne[0].bonus_szybkosc = 0.5f;
+        legendarne[0].waga = 7;
+        legendarne[0].cena = 500;
+
+        // Tarcza
+        snprintf(legendarne[1].nazwa, 50, "AEGIS");
+        legendarne[1].typ = PRZEDMIOT_TARCZA;
+        legendarne[1].rzadkosc = RZAD_LEG;
+        legendarne[1].bonus_obrazen = 0;
+        legendarne[1].bonus_odpornosci = 40;
+        legendarne[1].bonus_HP = 30;
+        legendarne[1].bonus_sila = 0;
+        legendarne[1].bonus_szybkosc = -0.2f;
+        legendarne[1].waga = 8;
+        legendarne[1].cena = 450;
+
+        // Zbroja
+        snprintf(legendarne[2].nazwa, 50, "DRAGON ARMOR");
+        legendarne[2].typ = PRZEDMIOT_ZBROJA;
+        legendarne[2].rzadkosc = RZAD_LEG;
+        legendarne[2].bonus_obrazen = 0;
+        legendarne[2].bonus_odpornosci = 60;
+        legendarne[2].bonus_HP = 50;
+        legendarne[2].bonus_sila = 0;
+        legendarne[2].bonus_szybkosc = -0.5f;
+        legendarne[2].waga = 10;
+        legendarne[2].cena = 600;
+
+        for (int i = 0; i < 3; i++) {
+            printf(KOLOR_BOLD KOLOR_YELLOW "%d: %s (cena: %d, waga: %d, obrazenia: %d, odpornosc: %d, HP: %d, sila: %d, szybkosc: %.2f)\n" KOLOR_RESET,
+                i, legendarne[i].nazwa, legendarne[i].cena, legendarne[i].waga, legendarne[i].bonus_obrazen,
+                legendarne[i].bonus_odpornosci, legendarne[i].bonus_HP, legendarne[i].bonus_sila, legendarne[i].bonus_szybkosc);
+        }
+        printf("Wybierz nr przedmiotu do kupienia (q aby anulowac): ");
+        fgets(linia, sizeof(linia), stdin);
+        if (linia[0] == 'q' || linia[0] == 'Q') continue;
+        int idx = atoi(linia);
+        if (idx >= 0 && idx < 3) {
+            if (gracz->waluta >= legendarne[idx].cena) {
+                if (dodaj_do_plecaka(plecak, legendarne[idx], gracz)) {
+                    gracz->waluta -= legendarne[idx].cena;
+                    printf(KOLOR_BOLD KOLOR_YELLOW "Kupiono %s!\n" KOLOR_RESET, legendarne[idx].nazwa);
+                }
+            } else {
+                printf("Nie masz wystarczajaco waluty!\n");
+            }
+        }
+    } else if (wybor == 3) {
+                if (gracz->waluta >= 100) {
+                    plecak->max_miejsce += 10;
+                    gracz->waluta -= 100;
+                    printf(KOLOR_BOLD KOLOR_YELLOW "Plecak powiekszony o 10!\n" KOLOR_RESET);
+                } else {
+                    printf("Nie masz wystarczajaco waluty!\n");
+                }
+            }
+        }
+    }
+
+    /* --- PORUSZANIE --- */
+    void porusz_gracza(Mapa* mapa, int* graczX, int* graczY, TypLokacji typ_lokacji, Postac *gracz, Plecak *plecak) {
+        char ruch;
+        printf("Podaj ruch (W - gora, S - dol, A - lewo, D - prawo, E - ekwipunek");
+        if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec) printf(", K - kupiec");
+        printf("): ");
+        scanf(" %c", &ruch);
+
+        if ((ruch == 'K' || ruch == 'k') && typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec) {
+            *graczX = 0;
+            *graczY = 0;
+            return;
+        }
+        if (ruch == 'E' || ruch == 'e') {
+            *graczX = -1;
+            return;
+        }
+        int nowyX = *graczX, nowyY = *graczY;
+        if (ruch == 'W' || ruch == 'w') nowyY--;
+        else if (ruch == 'S' || ruch == 's') nowyY++;
+        else if (ruch == 'A' || ruch == 'a') nowyX--;
+        else if (ruch == 'D' || ruch == 'd') nowyX++;
+
+        if (nowyX >= 0 && nowyX < mapa->szerokosc && nowyY >= 0 && nowyY < mapa->wysokosc) {
+            if (mapa->komorki[nowyY][nowyX].typ != SCIANA) {
+                *graczX = nowyX;
+                *graczY = nowyY;
+            }
+        }
+        printf("\n\n");
+    }
+
+    /* --- WALKA --- */
+    int oblicz_obrazenia(Postac* attacker, Postac* defender) {
+        int bronDamage = 0;
+        if (attacker->sloty[SLOT_BRON])
+            bronDamage = attacker->sloty[SLOT_BRON]->bonus_obrazen;
+        float sila_calkowita = attacker->sila + attacker->bonus_sila;
+        float odp_calkowita = defender->odp_pancerza + defender->bonus_odpornosc;
+
+        int damage = (int)(sila_calkowita + bronDamage - odp_calkowita);
+        if (damage < 1)
+            damage = 1;
+        return damage;
+    }
+
+    void pokaz_podsumowanie(Postac* gracz);
+
+    // --- Zastąp całą funkcję walka poniższą wersją, aby szybkość wpływała na kolejność i dodatkowy atak ---
+
+    void walka(Postac* gracz, Postac* przeciwnik, Plecak *plecak) {
+        printf(KOLOR_BOLD KOLOR_RED "Napotykasz przeciwnika! Walka rozpoczeta!\n" KOLOR_RESET);
+
+        float szybkosc_gracza = gracz->szybkosc + gracz->bonus_szybkosc;
+        float szybkosc_przeciwnika = przeciwnik->szybkosc + przeciwnik->bonus_szybkosc;
+
+        int tura_gracza = 0;
+        int tura_przeciwnika = 0;
+
+        // Kto zaczyna? (większa szybkość)
+        if (szybkosc_gracza > szybkosc_przeciwnika) {
+            tura_gracza = 1;
+            printf(KOLOR_CYAN "Gracz atakuje pierwszy (szybkosc: %.2f vs %.2f)\n" KOLOR_RESET, szybkosc_gracza, szybkosc_przeciwnika);
+        } else if (szybkosc_gracza < szybkosc_przeciwnika) {
+            tura_przeciwnika = 1;
+            printf(KOLOR_CYAN "Przeciwnik atakuje pierwszy (szybkosc: %.2f vs %.2f)\n" KOLOR_RESET, szybkosc_gracza, szybkosc_przeciwnika);
+        } else {
+            // Remis - losowo
+            if (rand() % 2 == 0) {
+                tura_gracza = 1;
+                printf(KOLOR_CYAN "Remis szybkości, gracz zaczyna.\n" KOLOR_RESET);
+            } else {
+                tura_przeciwnika = 1;
+                printf(KOLOR_CYAN "Remis szybkości, przeciwnik zaczyna.\n" KOLOR_RESET);
+            }
+        }
+
+        while (gracz->HP + gracz->bonus_HP > 0 && przeciwnik->HP > 0) {
+            // Gracz atakuje
+            if (tura_gracza) {
+                int ataki = 1;
+                if (szybkosc_gracza > 100.0f) {
+                    int extra = (int)(szybkosc_gracza - 100.0f);
+                    if (extra > 0) {
+                        int szansa = rand() % 100;
+                        if (szansa < extra) ataki++;
+                    }
+                }
+                for (int i = 0; i < ataki && przeciwnik->HP > 0; i++) {
+                    int damage = oblicz_obrazenia(gracz, przeciwnik);
+                    przeciwnik->HP -= damage;
+                    printf("Gracz atakuje%s i zadaje %d obrazen. HP przeciwnika: %d\n", ataki > 1 && i > 0 ? " (dodatkowy atak!)" : "", damage, przeciwnik->HP);
+                }
+                if (przeciwnik->HP <= 0) {
+                    printf(KOLOR_GREEN "Przeciwnik zostal pokonany!\n" KOLOR_RESET);
+                    gracz->XP += 30;
+                    gracz->liczba_wrogow++;
+                    if (rand() % 100 < 40) {
+                        Przedmiot item = generuj_przedmiot(gracz);
+                        printf(KOLOR_BOLD KOLOR_YELLOW "Zdobywasz przedmiot: %s\n" KOLOR_RESET, item.nazwa);
+                        dodaj_do_plecaka(plecak, item, gracz);
+                        if (rand() % 100 < 30) {
+                            Przedmiot leczenie = generuj_przedmiot(gracz);
+                            leczenie.typ = PRZEDMIOT_LECZENIE;
+                            printf(KOLOR_GREEN "Dodatkowo wypada mikstura leczenia!\n" KOLOR_RESET);
+                            dodaj_do_plecaka(plecak, leczenie, gracz);
+                        }
+                    }
+                    break;
+                }
+            }
+            // Przeciwnik atakuje
+            if (tura_przeciwnika) {
+                int ataki = 1;
+                if (szybkosc_przeciwnika > 100.0f) {
+                    int extra = (int)(szybkosc_przeciwnika - 100.0f);
+                    if (extra > 0) {
+                        int szansa = rand() % 100;
+                        if (szansa < extra) ataki++;
+                    }
+                }
+                for (int i = 0; i < ataki && gracz->HP + gracz->bonus_HP > 0; i++) {
+                    int damage = oblicz_obrazenia(przeciwnik, gracz);
+                    gracz->HP -= damage;
+                    printf("Przeciwnik atakuje%s i zadaje %d obrazen. HP gracza: %d\n", ataki > 1 && i > 0 ? " (dodatkowy atak!)" : "", damage, gracz->HP);
+
+                    // DODAJ: automatyczne użycie leczenia jeśli gracz miałby zginąć
+                    if ((gracz->HP + gracz->bonus_HP) <= 0) {
+                        // Szukaj mikstury w plecaku
+                        int found = 0;
+                        for (int idx = 0; idx < plecak->count; idx++) {
+                            if (plecak->items[idx].typ == PRZEDMIOT_LECZENIE) {
+                                printf(KOLOR_GREEN "Gracz automatycznie używa mikstury leczenia, aby uniknąć śmierci!\n" KOLOR_RESET);
+                                uzyj_leczenie(gracz, plecak, idx);
+                                found = 1;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            printf(KOLOR_BOLD KOLOR_RED "Gracz zostal pokonany! Koniec gry.\n" KOLOR_RESET);
+                            pokaz_podsumowanie(gracz);
+                            free(plecak->items);
+                            exit(0);
+                        }
+                    }
+                }
+                if ((gracz->HP + gracz->bonus_HP) <= 0) {
+                    printf(KOLOR_BOLD KOLOR_RED "Gracz zostal pokonany! Koniec gry.\n" KOLOR_RESET);
+                    pokaz_podsumowanie(gracz);
+                    free(plecak->items);
+                    exit(0);
+                }
+            }
+            // Zmiana tury
+            tura_gracza = !tura_gracza;
+            tura_przeciwnika = !tura_przeciwnika;
+        }
+        printf("Walka zakonczona zwyciestwem gracza!\n\n");
+        printf("Wcisnij ENTER aby kontynuowac...");
+        getchar(); getchar();
+    }
+
+    /* --- LEVEL UP --- */
+    void level_up(Postac* gracz) {
+        printf(KOLOR_BOLD KOLOR_GREEN "\nLEVEL UP! Osiagnales poziom %d!\n" KOLOR_RESET, gracz->poziom);
+        printf("Wybierz bonus:\n");
+        printf("1. +10%% do HP\n");
+        printf("2. +10%% do obrazen (sila)\n");
+        printf("3. +10%% do odpornosci\n");
+        printf("4. +10%% do szybkosc\n");
+        int wybor = 0;
+        while (wybor < 1 || wybor > 4) {
+            printf("Twoj wybor: ");
+            scanf("%d", &wybor);
+            int c; while ((c = getchar()) != '\n' && c != EOF) {}
+        }
+        if (wybor == 1) {
+            gracz->HP = (int)(gracz->HP * 1.1);
+            gracz->max_HP = (int)(gracz->max_HP * 1.1);
+            printf("Twoje bazowe HP wzroslo!\n");
+        } else if (wybor == 2) {
+            gracz->sila *= 1.1f;
+            printf("Twoja sila wzrosla!\n");
+        } else if (wybor == 3) {
+            gracz->odp_pancerza *= 1.1f;
+            printf("Twoja odpornosc wzrosla!\n");
+        } else if (wybor == 4) {
+            gracz->szybkosc *= 1.1f;
+            printf("Twoja szybkosc wzrosla!\n");
+        }
+        gracz->xp_do_lvlu += LEVELUP_XP * gracz->poziom; // Zwiększ wymagane XP do kolejnego poziomu
+    }
+
+    /* --- GENEROWANIE POSTACI --- */
+    Postac generuj_postac() {
+        Postac p;
+        p.HP = 100 + rand() % 50;
+        p.max_HP = p.HP; // <-- USTAW MAKSYMALNE HP NA START
+        p.AG = 10 + rand() % 5;
+        p.odp_pancerza = 10 + rand() % 10;
+        p.sila = 14 + rand() % 20;
+        p.mnoznik_hp = 1 + rand() % 5;
+        p.waga = 100 + rand() % 20;
+        p.zasieg_walki = 10 + rand() % 5;
+        p.zasieg_wizji = 50 + rand() % 10;
+        p.XP = rand() % 10;
+        p.szybkosc = 5 + rand() % 10;
+        p.pozycjaX = 1;
+        p.pozycjaY = 1;
+        for (int i = 0; i < SLOT_ILOSC; i++) p.sloty[i] = NULL;
+        p.bonus_HP = 0;
+        p.bonus_sila = 0;
+        p.bonus_odpornosc = 0;
+        p.bonus_szybkosc = 0.0f;
+        p.waluta = 30;
+        p.poziom = 1;
+        p.xp_do_lvlu = LEVELUP_XP;
+        p.szczescie = 1 + rand() % 5;
+        p.liczba_leczen = 0; //liczba uzytych leczen
+        p.liczba_pulapek = 0; //liczba pulapek wpadniętych
+        p.liczba_wrogow = 0; //liczba pokonanych wrogów
+        return p;
+    }
+
+    Postac generuj_przeciwnika(Postac *gracz) {
+        Postac enemy = generuj_postac();
+        int poziom = gracz->poziom;
+
+        // Losuj czy przeciwnik jest silny czy słaby (np. 30% szans na słabego)
+        int slaby = (rand() % 100 < 30);
+
+        if (slaby) {
+            enemy.HP = 30 + rand() % 20;
+            enemy.sila = 6 + rand() % 5;
+            enemy.odp_pancerza = 2 + rand() % 3;
+        } else {
+            // Skalowanie z poziomem gracza
+            enemy.HP = 40 + poziom * 10 + rand() % (10 + poziom * 2);
+            enemy.sila = 8 + poziom * 2 + rand() % (4 + poziom);
+            enemy.odp_pancerza = 4 + poziom + rand() % (2 + poziom / 2);
+        }
+        enemy.AG = 5 + rand() % 5;
+        enemy.mnoznik_hp = 1;
+        enemy.waga = 50 + rand() % 10;
+        enemy.zasieg_walki = 5 + rand() % 3;
+        enemy.zasieg_wizji = 20 + rand() % 10;
+        enemy.XP = 0;
+        enemy.szybkosc = 3 + rand() % 4;
+        enemy.pozycjaX = 0;
+        enemy.pozycjaY = 0;
+        for (int i = 0; i < SLOT_ILOSC; i++) enemy.sloty[i] = NULL;
+        Przedmiot *bron = malloc(sizeof(Przedmiot));
+        *bron = generuj_przedmiot(gracz);
+        enemy.sloty[SLOT_BRON] = bron;
+        return enemy;
+    }
+
+    /* --- INFO --- */
+    void wyswietl_informacje(Postac* gracz) {
+        printf(KOLOR_BOLD KOLOR_CYAN "╔══════════════════════════════════════════════════╗\n" KOLOR_RESET);
+        printf(KOLOR_BOLD KOLOR_CYAN "║              STATYSTYKI GRACZA                  ║\n" KOLOR_RESET);
+        printf(KOLOR_BOLD KOLOR_CYAN "╚══════════════════════════════════════════════════╝\n" KOLOR_RESET);
+
+        int calkowite_HP = gracz->HP + gracz->bonus_HP;
+        int max_calkowite_HP = gracz->max_HP + gracz->bonus_HP;
+        float calkowita_szybkosc = gracz->szybkosc + gracz->bonus_szybkosc;
+        float calkowita_sila = gracz->sila + gracz->bonus_sila;
+        float procent_hp = (float)calkowite_HP / (float)max_calkowite_HP;
+
+        // Kolorowanie HP
+        const char* kolor_hp;
+        if (procent_hp >= 0.75f) {
+            kolor_hp = KOLOR_GREEN;
+        } else if (procent_hp >= 0.3f) {
+            kolor_hp = KOLOR_YELLOW;
+        } else {
+            kolor_hp = KOLOR_RED;
+        }
+
+        printf(KOLOR_BOLD "Poziom: " KOLOR_RESET "%d\n", gracz->poziom);
+        printf(KOLOR_BOLD "XP:     " KOLOR_RESET "%ld / %d\n", gracz->XP, gracz->xp_do_lvlu);
+        printf(KOLOR_BOLD "Waluta: " KOLOR_RESET "%d\n", gracz->waluta);
+        printf(KOLOR_BOLD "Szczęście: " KOLOR_RESET "%d\n", gracz->szczescie);
+
+        // HP z kolorowaniem
+        printf(KOLOR_BOLD "HP:     " KOLOR_RESET "%s%d%s / %d ", kolor_hp, calkowite_HP, KOLOR_RESET, max_calkowite_HP);
+        printf("(bazowe: %d, bonus: %d)\n", gracz->HP, gracz->bonus_HP);
+
+        // Sloty
+        printf(KOLOR_BOLD "Wyposażenie:\n" KOLOR_RESET);
         for (int i = 0; i < SLOT_ILOSC; i++) {
+            printf("  %s: ", i == SLOT_BRON ? "Broń   " : i == SLOT_TARCZA ? "Tarcza " : "Zbroja ");
             if (gracz->sloty[i]) {
-                printf("%s: ", i == SLOT_BRON ? "Bron" : i == SLOT_TARCZA ? "Tarcza" : "Zbroja");
                 if (gracz->sloty[i]->rzadkosc == RZAD_LEG)
                     printf(KOLOR_BOLD KOLOR_YELLOW "%s" KOLOR_RESET "\n", gracz->sloty[i]->nazwa);
                 else
                     printf("%s\n", gracz->sloty[i]->nazwa);
             } else {
-                printf("%s: brak\n", i == SLOT_BRON ? "Bron" : i == SLOT_TARCZA ? "Tarcza" : "Zbroja");
+                printf(KOLOR_SZARY "brak" KOLOR_RESET "\n");
             }
         }
-        printf(KOLOR_BOLD KOLOR_CYAN "\n=== PLECAK (waga: %d/%d) ===\n" KOLOR_RESET, plecak->zajete_miejsce, plecak->max_miejsce);
-        if (plecak->count == 0) {
-            printf("Plecak jest pusty.\n");
-        } else {
-            for (int i = 0; i < plecak->count; i++) {
-                Przedmiot *item = &plecak->items[i];
-                printf("%s", kolory_rzadkosci[item->rzadkosc]);
-                printf("%d: %s (%s", i, item->nazwa,
-                    item->rzadkosc == RZAD_LEG ? "LEGENDARNY, " : "");
-                switch (item->typ) {
-                    case PRZEDMIOT_BRON: printf("Bron"); break;
-                    case PRZEDMIOT_TARCZA: printf("Tarcza"); break;
-                    case PRZEDMIOT_ZBROJA: printf("Zbroja"); break;
-                    case PRZEDMIOT_LECZENIE: printf("Leczenie"); break;
-                    case PRZEDMIOT_INNY: printf("Amulet"); break;
-                    default: printf("Inny");
-                }
-                printf(", waga: %d, cena: %d", item->waga, item->cena);
-                if (item->bonus_obrazen) printf(", obrazenia: %d", item->bonus_obrazen);
-                if (item->bonus_odpornosci) printf(", odpornosc: %d", item->bonus_odpornosci);
-                if (item->bonus_HP) printf(", HP: %d", item->bonus_HP);
-                if (item->bonus_sila) printf(", sila: %d", item->bonus_sila);
-                if (item->bonus_szybkosc) printf(", szybkosc: %.2f", item->bonus_szybkosc);
-                if (item->typ == PRZEDMIOT_LECZENIE) printf(", leczenie: %d", item->leczenie);
-                if (item->typ == PRZEDMIOT_INNY) {
-                    if (item->rzadkosc == RZAD_LEG)
-                        printf(KOLOR_MAGENTA " | Amulet Regeneracji: +10 HP, po walce leczy 10HP, po pulapce 5HP" KOLOR_RESET);
-                    else
-                        printf(KOLOR_MAGENTA " | Amulet: +5 HP, nie zajmuje miejsca w plecaku" KOLOR_RESET);
-                }
-                printf(")" KOLOR_RESET "\n");
-            }
+
+        printf(KOLOR_BOLD "Statystyki:\n" KOLOR_RESET);
+        printf("  Siła:       " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %d)\n", calkowita_sila, gracz->sila, gracz->bonus_sila);
+        printf("  Odporność:  " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %d)\n", gracz->odp_pancerza + gracz->bonus_odpornosc, gracz->odp_pancerza, gracz->bonus_odpornosc);
+        printf("  Szybkość:   " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %.2f)\n", calkowita_szybkosc, gracz->szybkosc, gracz->bonus_szybkosc);
+
+        printf(KOLOR_BOLD KOLOR_CYAN "--------------------------------------------------\n" KOLOR_RESET);
+    }
+
+
+    void pokaz_podsumowanie(Postac* gracz) {
+        printf(KOLOR_BOLD KOLOR_RED "\n=== KONIEC GRY ===\n" KOLOR_RESET);
+        printf("Poziom: %d\n", gracz->poziom);
+        printf("XP: %ld\n", gracz->XP);
+        printf("Pokonanych wrogow: %d\n", gracz->liczba_wrogow);
+        printf("Wpadnietych pulapek: %d\n", gracz->liczba_pulapek);
+        printf("Szczescie: %d\n", gracz->szczescie);
+        printf("Waluta: %d\n", gracz->waluta);
+        printf("Dziekujemy za gre!\n");
+    }
+
+    void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
+        char filename[64];
+        snprintf(filename, sizeof(filename), "save_%s.sav", gracz->nazwa);
+        FILE* f = fopen(filename, "w");
+        if (!f) {
+            printf("Nie mozna zapisac gry!\n");
+            return;
         }
-        printf("\nWybierz nr przedmiotu do wyposazenia/uzycia (q aby wyjsc, L <nr> aby uzyc leczenie, W <nr> aby wyrzucic, Z <slot> aby zdjac przedmiot ze slotu): "); //aby zjadc przedmiot to np Z 0 (od 0 do 2)
-        char linia[32];
-        fgets(linia, sizeof(linia), stdin);
-        int wybor;
-        if (linia[0] == 'q' || linia[0] == 'Q') break;
-        if (strncmp(linia, "ZAPISZ", 6) == 0 || strncmp(linia, "zapisz", 6) == 0) {
-            zapisz_gre(gracz, plecak, typ_lokacji, mapa, npc_quest);
-            printf("Wcisnij ENTER aby kontynuowac...");
-            fgets(linia, sizeof(linia), stdin);
-            continue;
-        }
-        if (sscanf(linia, "L %d", &wybor) == 1) {
-            uzyj_leczenie(gracz, plecak, wybor);
-        } else if ((sscanf(linia, "W %d", &wybor) == 1) || (sscanf(linia, "w %d", &wybor) == 1)) {
-            if (wybor >= 0 && wybor < plecak->count) {
-                printf("Wyrzucono %s z plecaka.\n", plecak->items[wybor].nazwa);
-                usun_z_plecaka(plecak, wybor);
-                printf("Wcisnij ENTER aby kontynuowac...");
-                fgets(linia, sizeof(linia), stdin);
-            }
-        } else if (sscanf(linia, "Z %d", &wybor) == 1) {
-            // Zdejmowanie przedmiotu ze slotu (0-Bron, 1-Tarcza, 2-Zbroja)
-            if (wybor >= 0 && wybor < SLOT_ILOSC && gracz->sloty[wybor]) {
-                if (plecak->zajete_miejsce + gracz->sloty[wybor]->waga > plecak->max_miejsce) {
-                    printf(KOLOR_RED "Brak miejsca w plecaku na zdjęcie przedmiotu!\n" KOLOR_RESET);
-                } else {
-                    usun_bonusy(gracz, gracz->sloty[wybor]);
-                    if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
-                    plecak->items[plecak->count++] = *(gracz->sloty[wybor]);
-                    plecak->zajete_miejsce += gracz->sloty[wybor]->waga;
-                    printf(KOLOR_YELLOW "Zdejmujesz '%s' i chowasz do plecaka.\n" KOLOR_RESET, gracz->sloty[wybor]->nazwa);
-                    free(gracz->sloty[wybor]);
-                    gracz->sloty[wybor] = NULL;
-                }
-                printf("Wcisnij ENTER aby kontynuowac...");
-                fgets(linia, sizeof(linia), stdin);
-            }
-        } else if (sscanf(linia, "%d", &wybor) == 1) {
-            if (wybor >= 0 && wybor < plecak->count) {
-                if (plecak->items[wybor].typ == PRZEDMIOT_LECZENIE)
-                    uzyj_leczenie(gracz, plecak, wybor);
-                else
-                    wyposaz_przedmiot(gracz, plecak, wybor);
-            }
-        }
-    }
-}
+        // Wersja zapisu
+        fprintf(f, "SAVE_VERSION 1\n");
 
-/* --- GENEROWANIE MAPY --- */
-void generuj_mape(Mapa* mapa, TypLokacji typ_lokacji) {
-    switch (typ_lokacji) {
-        case LOKACJA_LAS:
-            mapa->szerokosc = 20;
-            mapa->wysokosc = 10;
-            break;
-        case LOKACJA_WIOSKA:
-            mapa->szerokosc = 15;
-            mapa->wysokosc = 8;
-            mapa->czy_jest_kupiec = 1; // ZAWSZE jest kupiec w wiosce
-            break;
-        case LOKACJA_JASKINIA:
-            mapa->szerokosc = 12;
-            mapa->wysokosc = 7;
-            break;
-        case LOKACJA_OBOZ:
-            mapa->szerokosc = 10;
-            mapa->wysokosc = 6;
-            break;
-        case LOKACJA_POLANA:
-            mapa->szerokosc = 18;
-            mapa->wysokosc = 8;
-            break;
-        case LOKACJA_RUINY:
-            mapa->szerokosc = 13;
-            mapa->wysokosc = 7;
-            break;
-        default:
-            mapa->szerokosc = 12;
-            mapa->wysokosc = 8;
-    }
-    if (typ_lokacji == LOKACJA_WIOSKA)
-        mapa->czy_jest_kupiec = (rand() % 100 < 85) ? 1 : 0; // 85% szans na kupca
-    else
-        mapa->czy_jest_kupiec = 0;
+        // Zapisz postac
+        fprintf(f, "%s\n%d %d %d %f %f %lf %d %f %f %ld %f %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
+            gracz->nazwa, gracz->HP, gracz->max_HP, gracz->AG, gracz->odp_pancerza, gracz->sila, gracz->mnoznik_hp,
+            gracz->waga, gracz->zasieg_walki, gracz->zasieg_wizji, gracz->XP, gracz->szybkosc, gracz->pozycjaX, gracz->pozycjaY,
+            gracz->bonus_HP, gracz->bonus_sila, gracz->bonus_odpornosc, gracz->bonus_szybkosc, gracz->waluta, gracz->poziom,
+            gracz->xp_do_lvlu, gracz->szczescie, gracz->liczba_leczen, gracz->liczba_pulapek, gracz->liczba_wrogow,
+            (int)typ_lokacji);
 
-    for (int y = 0; y < mapa->wysokosc; y++) {
-        for (int x = 0; x < mapa->szerokosc; x++) {
-            int wartosc_losowa = rand() % 100;
-            if (wartosc_losowa < 30)
-                mapa->komorki[y][x].typ = SCIANA;
-            else if (wartosc_losowa < 40)
-                mapa->komorki[y][x].typ = PULAPKA;
-            else if (wartosc_losowa < 50)
-                mapa->komorki[y][x].typ = PRZECIWNIK;
-            else
-                mapa->komorki[y][x].typ = PUSTE;
-        }
-    }
-    int liczba_skarbow = 1;
-    int dodaj_specjalny = 0;
-    if (typ_lokacji == LOKACJA_WIOSKA || typ_lokacji == LOKACJA_OBOZ) {
-        liczba_skarbow = 2;
-        dodaj_specjalny = 1;
-    }
-    for (int i = 0; i < liczba_skarbow; i++) {
-        int skarbX, skarbY;
-        do {
-            skarbX = rand() % mapa->szerokosc;
-            skarbY = rand() % mapa->wysokosc;
-        } while (mapa->komorki[skarbY][skarbX].typ != PUSTE);
-        if (dodaj_specjalny && i == liczba_skarbow - 1)
-            mapa->komorki[skarbY][skarbX].typ = SKARB_SPEC;
-        else
-            mapa->komorki[skarbY][skarbX].typ = SKARB;
-    }
-    int bramaX, bramaY;
-    do {
-        bramaX = rand() % mapa->szerokosc;
-        bramaY = rand() % mapa->wysokosc;
-    } while (mapa->komorki[bramaY][bramaX].typ != PUSTE);
-    mapa->komorki[bramaY][bramaX].typ = BRAMA;
-}
-
-/* --- MAPA I RYSOWANIE --- */
-void rysuj_legenda(Mapa* mapa, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
-    printf(KOLOR_BOLD KOLOR_MAGENTA "LEGENDA MAPY:\n" KOLOR_RESET);
-    printf(". - puste pole\n");
-    printf(KOLOR_WHITE "#" KOLOR_RESET " - sciana\n");
-    printf(KOLOR_YELLOW "S" KOLOR_RESET " - skarb (zdobywasz 50 XP)\n");
-    printf(KOLOR_YELLOW "$" KOLOR_RESET " - specjalny skarb (moze byc pusty, ale daje lepsze przedmioty)\n");
-    printf(KOLOR_RED "T" KOLOR_RESET " - pulapka (tracisz 10 HP i zyskujesz 1 szczescia)\n");
-    printf(KOLOR_RED "P" KOLOR_RESET " - przeciwnik (walka)\n");
-    printf(KOLOR_CYAN "B" KOLOR_RESET " - brama (przejscie na kolejny poziom – mapa generowana na nowo)\n");
-    printf(KOLOR_GREEN "@" KOLOR_RESET " - Twoja postac\n");
-    if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec)
-        printf(KOLOR_BOLD KOLOR_YELLOW "K" KOLOR_RESET " - Kupiec (sklep)\n");
-    printf(KOLOR_MAGENTA "Q" KOLOR_RESET " - NPC z zadaniem (losowa pozycja w wiosce)\n");
-    printf("---------------------------------\n\n");
-}
-
-void rysuj_mape(Mapa* mapa, int graczX, int graczY, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
-    printf("   +");
-    for (int x = 0; x < mapa->szerokosc; x++) printf("--");
-    printf("+  [%s]\n", nazwy_lokacji[typ_lokacji]);
-    printf("   ");
-    for (int x = 0; x < mapa->szerokosc; x++) {
-        printf("%2d", x);
-    }
-    printf("\n");
-    printf("   +");
-    for (int x = 0; x < mapa->szerokosc; x++) printf("--");
-    printf("+\n");
-
-    for (int y = 0; y < mapa->wysokosc; y++) {
-        printf("%2d |", y);
-        for (int x = 0; x < mapa->szerokosc; x++) {
-            if (x == graczX && y == graczY) {
-                printf(KOLOR_GREEN " @" KOLOR_RESET);
-            } else if (typ_lokacji == LOKACJA_WIOSKA && npc_quest && npc_quest->aktywny && x == npc_quest->x && y == npc_quest->y) {
-                printf(KOLOR_MAGENTA " Q" KOLOR_RESET);
-            } else if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec && x == 0 && y == 0) {
-                printf(KOLOR_BOLD KOLOR_YELLOW " K" KOLOR_RESET);
+        // Zapisz sloty wyposażenia
+        for (int i = 0; i < SLOT_ILOSC; i++) {
+            if (gracz->sloty[i]) {
+                Przedmiot* it = gracz->sloty[i];
+                fprintf(f, "SLOT %d %s|%d %d %d %d %d %d %f %d %d %d %d %d\n",
+                    i,
+                    it->nazwa, it->typ, it->rzadkosc, it->bonus_obrazen, it->bonus_odpornosci, it->bonus_HP, it->bonus_sila,
+                    it->bonus_szybkosc, it->waga, it->cena, it->leczenie, it->typ_leczenia, it->typ_amuletu
+                );
             } else {
-                switch (mapa->komorki[y][x].typ) {
-                    case PUSTE:      printf("\033[1;32m  \033[0m"); break;
-                    case SCIANA:     printf(KOLOR_WHITE " #" KOLOR_RESET); break;
-                    case SKARB:      printf(KOLOR_YELLOW " S" KOLOR_RESET); break;
-                    case SKARB_SPEC: printf(KOLOR_YELLOW " $" KOLOR_RESET); break;
-                    case PULAPKA:    printf(KOLOR_RED " T" KOLOR_RESET); break;      // zamiast T dac \033[1;32m  \033[0m
-                    case PRZECIWNIK: printf(KOLOR_RED " P" KOLOR_RESET); break;
-                    case BRAMA:      printf(KOLOR_CYAN " B" KOLOR_RESET); break;
-                    default:         printf("  ");
-                }
+                fprintf(f, "SLOT %d EMPTY\n", i);
             }
         }
-        printf(" |\n");
-    }
-    printf("   +");
-    for (int x = 0; x < mapa->szerokosc; x++) printf("--");
-    printf("+\n");
-}
 
-/* --- BFS --- */
-int is_map_traversable(Mapa* mapa, int startX, int startY) {
-    int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
-    Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
-    int head = 0, tail = 0;
-    queue[tail++] = (Pozycja){startX, startY};
-    visited[startY][startX] = 1;
-    int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
-    while (head < tail) {
-        Pozycja current = queue[head++];
-        if (mapa->komorki[current.y][current.x].typ == BRAMA)
-            return 1;
-        for (int i = 0; i < 4; i++) {
-            int nx = current.x + directions[i][0];
-            int ny = current.y + directions[i][1];
-            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
-                if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
-                    visited[ny][nx] = 1;
-                    queue[tail++] = (Pozycja){nx, ny};
-                }
+        // Zapisz mapę
+        fprintf(f, "MAPA %d %d %d\n", mapa->szerokosc, mapa->wysokosc, mapa->czy_jest_kupiec);
+        for (int y = 0; y < mapa->wysokosc; y++) {
+            for (int x = 0; x < mapa->szerokosc; x++) {
+                fprintf(f, "%d ", mapa->komorki[y][x].typ);
             }
+            fprintf(f, "\n");
         }
-    }
-    return 0;
-}
+        // Zapisz NPC
+        fprintf(f, "NPC %d %d %d\n", npc_quest->x, npc_quest->y, npc_quest->aktywny);
 
-int is_skarb_dostepny(Mapa* mapa, int startX, int startY) {
-    int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
-    Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
-    int head = 0, tail = 0;
-    queue[tail++] = (Pozycja){startX, startY};
-    visited[startY][startX] = 1;
-    int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
-    while (head < tail) {
-        Pozycja current = queue[head++];
-        if (mapa->komorki[current.y][current.x].typ == SKARB ||
-            mapa->komorki[current.y][current.x].typ == SKARB_SPEC)
-            return 1;
-        for (int i = 0; i < 4; i++) {
-            int nx = current.x + directions[i][0];
-            int ny = current.y + directions[i][1];
-            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
-                if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
-                    visited[ny][nx] = 1;
-                    queue[tail++] = (Pozycja){nx, ny};
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-void generuj_przechodna_mape(Mapa* mapa, TypLokacji* typ_lokacji) {
-    *typ_lokacji = rand() % 6;
-    do {
-        generuj_mape(mapa, *typ_lokacji);
-        mapa->komorki[1][1].typ = PUSTE;
-    } while (!is_map_traversable(mapa, 1, 1) || !is_skarb_dostepny(mapa, 1, 1));
-}
-
-int czy_npc_dostepny(Mapa* mapa, int startX, int startY, int npcX, int npcY) {
-    int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
-    Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
-    int head = 0, tail = 0;
-    queue[tail++] = (Pozycja){startX, startY};
-    visited[startY][startX] = 1;
-    int directions[4][2] = { {0,1}, {1,0}, {0,-1}, {-1,0} };
-    while (head < tail) {
-        Pozycja current = queue[head++];
-        if (current.x == npcX && current.y == npcY)
-            return 1;
-        for (int i = 0; i < 4; i++) {
-            int nx = current.x + directions[i][0];
-            int ny = current.y + directions[i][1];
-            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
-                if (!visited[ny][nx] && mapa->komorki[ny][nx].typ != SCIANA) {
-                    visited[ny][nx] = 1;
-                    queue[tail++] = (Pozycja){nx, ny};
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-void losuj_pozycje_npc(Mapa* mapa, NPCQuest* npc_quest) {
-    int x, y;
-    do {
-        x = rand() % mapa->szerokosc;
-        y = rand() % mapa->wysokosc;
-    } while (mapa->komorki[y][x].typ == SCIANA || mapa->komorki[y][x].typ == BRAMA
-             || (x == 0 && y == 0 && mapa->czy_jest_kupiec)
-             || !czy_npc_dostepny(mapa, 1, 1, x, y));
-    npc_quest->x = x;
-    npc_quest->y = y;
-    npc_quest->aktywny = 1;
-}
-
-// --- Funkcja do generowania questa ---
-void generuj_questa(Quest *quest, Postac *gracz) {
-    TypQuestu poprzedni = quest->typ;
-    TypQuestu nowy;
-    do {
-        nowy = (rand() % 2) ? QUEST_ZABIJ_WROGOW : QUEST_WEJDZ_PULAPKI;
-    } while (nowy == poprzedni && poprzedni != QUEST_BRAK);
-    quest->typ = nowy;
-    if (quest->typ == QUEST_ZABIJ_WROGOW) {
-        quest->wymagane = 5 + rand() % 6;
-        printf("Zadanie: Pokonaj %d przeciwnikow!\n", quest->wymagane);
-    } else if (quest->typ == QUEST_WEJDZ_PULAPKI) {
-        quest->wymagane = 3 + rand() % 4;
-        printf("Zadanie: Wejdz w %d pulapek!\n", quest->wymagane);
-    }
-    quest->postep = 0;
-    quest->aktywny = 1;
-    quest->do_odebrania = 1;
-    quest->start_wrogow = gracz->liczba_wrogow;
-    quest->start_pulapek = gracz->liczba_pulapek;
-}
-
-// --- Dialog z NPC ---
-void dialog_npc(Postac *gracz, Quest *quest, Plecak *plecak) {
-    while (1) {
-        czysc_ekran();
-        printf(KOLOR_BOLD KOLOR_MAGENTA "NPC od zadan\n" KOLOR_RESET);
-        printf("1. Zapytaj o questa\n");
-        printf("2. Odbierz nagrode za wykonane zadanie\n");
-        printf("3. Zrezygnuj z questa\n");
-        printf("q. Wyjdz\n");
-        char linia[16];
-        fgets(linia, sizeof(linia), stdin);
-        if (linia[0] == 'q' || linia[0] == 'Q') break;
-        int wybor = atoi(linia);
-        if (wybor == 1) {
-            if (!quest->aktywny && !quest->do_odebrania) {
-                generuj_questa(quest, gracz);
-                printf("Nowe zadanie przyjete!\n");
-            } else if (quest->aktywny) {
-                printf("Aktualne zadanie: ");
-                if (quest->typ == QUEST_ZABIJ_WROGOW)
-                    printf("Pokonaj %d przeciwnikow (postep: %d/%d)\n", quest->wymagane, gracz->liczba_wrogow - quest->start_wrogow, quest->wymagane);
-                else if (quest->typ == QUEST_WEJDZ_PULAPKI)
-                    printf("Wejdz w %d pulapek (postep: %d/%d)\n", quest->wymagane, gracz->liczba_pulapek - quest->start_pulapek, quest->wymagane);
-                } else if (quest->do_odebrania) {
-                printf("Masz ukonczone zadanie! Odbierz nagrode.\n");
-            }
-            printf("Wcisnij ENTER aby kontynuowac...");
-            fgets(linia, sizeof(linia), stdin);
-                } else if (wybor == 2) {
-            int ukonczone = 0;
-            if (quest->aktywny) {
-                if ((quest->typ == QUEST_ZABIJ_WROGOW && (gracz->liczba_wrogow - quest->start_wrogow) >= quest->wymagane) ||
-                    (quest->typ == QUEST_WEJDZ_PULAPKI && (gracz->liczba_pulapek - quest->start_pulapek) >= quest->wymagane)) {
-                    ukonczone = 1;
-                }
-            }
-            if (ukonczone) {
-                printf(KOLOR_GREEN "Gratulacje! Zadanie wykonane!\n" KOLOR_RESET);
-                int nagroda_waluta = 30 + rand() % 41; // 30-70 waluty
-                gracz->waluta += nagroda_waluta;
-                printf("Otrzymujesz %d waluty!\n", nagroda_waluta);
-                Przedmiot nagroda = generuj_przedmiot(gracz);
-                dodaj_do_plecaka(plecak, nagroda, gracz);
-                // Szansa na powiększenie plecaka
-                if (rand() % 30 == 0) {
-                    plecak->max_miejsce += 5;
-                    printf(KOLOR_BOLD KOLOR_YELLOW "Twój plecak powiększa się o 5!\n" KOLOR_RESET);
-                }
-                quest->aktywny = 0;
-                quest->do_odebrania = 0;
-                quest->typ = QUEST_BRAK;
-                printf("Wcisnij ENTER aby kontynuowac...");
-                fgets(linia, sizeof(linia), stdin);
-                break;
-            } else {
-                printf("Nie ukonczyles jeszcze zadania!\n");
-                printf("Wcisnij ENTER aby kontynuowac...");
-                fgets(linia, sizeof(linia), stdin);
-            }
-        }
-         else if (wybor == 3) {
-            if (quest->aktywny) {
-                printf("Zrezygnowales z questa. Nowe zadanie mozesz wziac u kolejnego NPC.\n");
-                quest->aktywny = 0;
-                quest->do_odebrania = 0;
-                quest->typ = QUEST_BRAK;
-            } else {
-                printf("Nie masz aktywnego questa.\n");
-            }
-            printf("Wcisnij ENTER aby kontynuowac...");
-            fgets(linia, sizeof(linia), stdin);
-            break;
-        }
-    }
-}
-
-/* --- KUPIEC --- */
-void sklep(Postac *gracz, Plecak *plecak) {
-    while (1) {
-        printf(KOLOR_BOLD KOLOR_MAGENTA "\n=== KUPIEC ===\n" KOLOR_RESET);
-        printf("Twoja waluta: %d\n", gracz->waluta);
-        printf("1. Sprzedaj przedmiot z plecaka\n");
-        printf("2. Kup LEGENDARNY przedmiot\n");
-        printf("3. Powieksz plecak o 10 (koszt: 100 waluty)\n");
-        printf("q. Wyjdz\n");
-        char linia[16];
-        fgets(linia, sizeof(linia), stdin);
-        if (linia[0] == 'q' || linia[0] == 'Q') break;
-        int wybor = atoi(linia);
-        if (wybor == 1) {
-            if (plecak->count == 0) {
-                printf("Nie masz nic do sprzedania.\n");
-                continue;
-            }
-            for (int i = 0; i < plecak->count; i++) {
-                printf("%d: %s (cena: %d)\n", i, plecak->items[i].nazwa, plecak->items[i].cena);
-            }
-            printf("Wybierz nr przedmiotu do sprzedania (q aby anulowac): ");
-            fgets(linia, sizeof(linia), stdin);
-            if (linia[0] == 'q' || linia[0] == 'Q') continue;
-            int idx = atoi(linia);
-            if (idx >= 0 && idx < plecak->count) {
-                printf("Na pewno chcesz sprzedac %s za %d waluty? (T/N): ", plecak->items[idx].nazwa, plecak->items[idx].cena);
-                char potw[8];
-                fgets(potw, sizeof(potw), stdin);
-                if (potw[0] == 'T' || potw[0] == 't') {
-                    printf("Sprzedano %s za %d waluty!\n", plecak->items[idx].nazwa, plecak->items[idx].cena);
-                    gracz->waluta += plecak->items[idx].cena;
-                    usun_z_plecaka(plecak, idx);
-                } else {
-                    printf("Anulowano sprzedaz.\n");
-                }
-            }
-        } else if (wybor == 2) {
-    printf("Dostepne LEGENDARNE przedmioty:\n");
-    Przedmiot legendarne[3];
-
-    // Miecz
-    snprintf(legendarne[0].nazwa, 50, "EXCALIBUR");
-    legendarne[0].typ = PRZEDMIOT_BRON;
-    legendarne[0].rzadkosc = RZAD_LEG;
-    legendarne[0].bonus_obrazen = 50;
-    legendarne[0].bonus_odpornosci = 0;
-    legendarne[0].bonus_HP = 20;
-    legendarne[0].bonus_sila = 10;
-    legendarne[0].bonus_szybkosc = 0.5f;
-    legendarne[0].waga = 7;
-    legendarne[0].cena = 500;
-
-    // Tarcza
-    snprintf(legendarne[1].nazwa, 50, "AEGIS");
-    legendarne[1].typ = PRZEDMIOT_TARCZA;
-    legendarne[1].rzadkosc = RZAD_LEG;
-    legendarne[1].bonus_obrazen = 0;
-    legendarne[1].bonus_odpornosci = 40;
-    legendarne[1].bonus_HP = 30;
-    legendarne[1].bonus_sila = 0;
-    legendarne[1].bonus_szybkosc = -0.2f;
-    legendarne[1].waga = 8;
-    legendarne[1].cena = 450;
-
-    // Zbroja
-    snprintf(legendarne[2].nazwa, 50, "DRAGON ARMOR");
-    legendarne[2].typ = PRZEDMIOT_ZBROJA;
-    legendarne[2].rzadkosc = RZAD_LEG;
-    legendarne[2].bonus_obrazen = 0;
-    legendarne[2].bonus_odpornosci = 60;
-    legendarne[2].bonus_HP = 50;
-    legendarne[2].bonus_sila = 0;
-    legendarne[2].bonus_szybkosc = -0.5f;
-    legendarne[2].waga = 10;
-    legendarne[2].cena = 600;
-
-    for (int i = 0; i < 3; i++) {
-        printf(KOLOR_BOLD KOLOR_YELLOW "%d: %s (cena: %d, waga: %d, obrazenia: %d, odpornosc: %d, HP: %d, sila: %d, szybkosc: %.2f)\n" KOLOR_RESET,
-            i, legendarne[i].nazwa, legendarne[i].cena, legendarne[i].waga, legendarne[i].bonus_obrazen,
-            legendarne[i].bonus_odpornosci, legendarne[i].bonus_HP, legendarne[i].bonus_sila, legendarne[i].bonus_szybkosc);
-    }
-    printf("Wybierz nr przedmiotu do kupienia (q aby anulowac): ");
-    fgets(linia, sizeof(linia), stdin);
-    if (linia[0] == 'q' || linia[0] == 'Q') continue;
-    int idx = atoi(linia);
-    if (idx >= 0 && idx < 3) {
-        if (gracz->waluta >= legendarne[idx].cena) {
-            if (dodaj_do_plecaka(plecak, legendarne[idx], gracz)) {
-                gracz->waluta -= legendarne[idx].cena;
-                printf(KOLOR_BOLD KOLOR_YELLOW "Kupiono %s!\n" KOLOR_RESET, legendarne[idx].nazwa);
-            }
-        } else {
-            printf("Nie masz wystarczajaco waluty!\n");
-        }
-    }
-} else if (wybor == 3) {
-            if (gracz->waluta >= 100) {
-                plecak->max_miejsce += 10;
-                gracz->waluta -= 100;
-                printf(KOLOR_BOLD KOLOR_YELLOW "Plecak powiekszony o 10!\n" KOLOR_RESET);
-            } else {
-                printf("Nie masz wystarczajaco waluty!\n");
-            }
-        }
-    }
-}
-
-/* --- PORUSZANIE --- */
-void porusz_gracza(Mapa* mapa, int* graczX, int* graczY, TypLokacji typ_lokacji, Postac *gracz, Plecak *plecak) {
-    char ruch;
-    printf("Podaj ruch (W - gora, S - dol, A - lewo, D - prawo, E - ekwipunek");
-    if (typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec) printf(", K - kupiec");
-    printf("): ");
-    scanf(" %c", &ruch);
-
-    if ((ruch == 'K' || ruch == 'k') && typ_lokacji == LOKACJA_WIOSKA && mapa->czy_jest_kupiec) {
-        *graczX = 0;
-        *graczY = 0;
-        return;
-    }
-    if (ruch == 'E' || ruch == 'e') {
-        *graczX = -1;
-        return;
-    }
-    int nowyX = *graczX, nowyY = *graczY;
-    if (ruch == 'W' || ruch == 'w') nowyY--;
-    else if (ruch == 'S' || ruch == 's') nowyY++;
-    else if (ruch == 'A' || ruch == 'a') nowyX--;
-    else if (ruch == 'D' || ruch == 'd') nowyX++;
-
-    if (nowyX >= 0 && nowyX < mapa->szerokosc && nowyY >= 0 && nowyY < mapa->wysokosc) {
-        if (mapa->komorki[nowyY][nowyX].typ != SCIANA) {
-            *graczX = nowyX;
-            *graczY = nowyY;
-        }
-    }
-    printf("\n\n");
-}
-
-/* --- WALKA --- */
-int oblicz_obrazenia(Postac* attacker, Postac* defender) {
-    int bronDamage = 0;
-    if (attacker->sloty[SLOT_BRON])
-        bronDamage = attacker->sloty[SLOT_BRON]->bonus_obrazen;
-    float sila_calkowita = attacker->sila + attacker->bonus_sila;
-    float odp_calkowita = defender->odp_pancerza + defender->bonus_odpornosc;
-
-    int damage = (int)(sila_calkowita + bronDamage - odp_calkowita);
-    if (damage < 1)
-        damage = 1;
-    return damage;
-}
-
-void pokaz_podsumowanie(Postac* gracz);
-
-// --- Zastąp całą funkcję walka poniższą wersją, aby szybkość wpływała na kolejność i dodatkowy atak ---
-
-void walka(Postac* gracz, Postac* przeciwnik, Plecak *plecak) {
-    printf(KOLOR_BOLD KOLOR_RED "Napotykasz przeciwnika! Walka rozpoczeta!\n" KOLOR_RESET);
-
-    float szybkosc_gracza = gracz->szybkosc + gracz->bonus_szybkosc;
-    float szybkosc_przeciwnika = przeciwnik->szybkosc + przeciwnik->bonus_szybkosc;
-
-    int tura_gracza = 0;
-    int tura_przeciwnika = 0;
-
-    // Kto zaczyna? (większa szybkość)
-    if (szybkosc_gracza > szybkosc_przeciwnika) {
-        tura_gracza = 1;
-        printf(KOLOR_CYAN "Gracz atakuje pierwszy (szybkosc: %.2f vs %.2f)\n" KOLOR_RESET, szybkosc_gracza, szybkosc_przeciwnika);
-    } else if (szybkosc_gracza < szybkosc_przeciwnika) {
-        tura_przeciwnika = 1;
-        printf(KOLOR_CYAN "Przeciwnik atakuje pierwszy (szybkosc: %.2f vs %.2f)\n" KOLOR_RESET, szybkosc_gracza, szybkosc_przeciwnika);
-    } else {
-        // Remis - losowo
-        if (rand() % 2 == 0) {
-            tura_gracza = 1;
-            printf(KOLOR_CYAN "Remis szybkości, gracz zaczyna.\n" KOLOR_RESET);
-        } else {
-            tura_przeciwnika = 1;
-            printf(KOLOR_CYAN "Remis szybkości, przeciwnik zaczyna.\n" KOLOR_RESET);
-        }
-    }
-
-    while (gracz->HP + gracz->bonus_HP > 0 && przeciwnik->HP > 0) {
-        // Gracz atakuje
-        if (tura_gracza) {
-            int ataki = 1;
-            if (szybkosc_gracza > 100.0f) {
-                int extra = (int)(szybkosc_gracza - 100.0f);
-                if (extra > 0) {
-                    int szansa = rand() % 100;
-                    if (szansa < extra) ataki++;
-                }
-            }
-            for (int i = 0; i < ataki && przeciwnik->HP > 0; i++) {
-                int damage = oblicz_obrazenia(gracz, przeciwnik);
-                przeciwnik->HP -= damage;
-                printf("Gracz atakuje%s i zadaje %d obrazen. HP przeciwnika: %d\n", ataki > 1 && i > 0 ? " (dodatkowy atak!)" : "", damage, przeciwnik->HP);
-            }
-            if (przeciwnik->HP <= 0) {
-                printf(KOLOR_GREEN "Przeciwnik zostal pokonany!\n" KOLOR_RESET);
-                gracz->XP += 30;
-                gracz->liczba_wrogow++; // Dodaj to!
-                if (rand() % 100 < 40) {
-                    Przedmiot item = generuj_przedmiot(gracz);
-                    printf(KOLOR_BOLD KOLOR_YELLOW "Zdobywasz przedmiot: %s\n" KOLOR_RESET, item.nazwa);
-                    dodaj_do_plecaka(plecak, item, gracz);
-                }
-                break;
-            }
-        }
-        // Przeciwnik atakuje
-        if (tura_przeciwnika) {
-            int ataki = 1;
-            if (szybkosc_przeciwnika > 100.0f) {
-                int extra = (int)(szybkosc_przeciwnika - 100.0f);
-                if (extra > 0) {
-                    int szansa = rand() % 100;
-                    if (szansa < extra) ataki++;
-                }
-            }
-            for (int i = 0; i < ataki && gracz->HP + gracz->bonus_HP > 0; i++) {
-                int damage = oblicz_obrazenia(przeciwnik, gracz);
-                gracz->HP -= damage;
-                printf("Przeciwnik atakuje%s i zadaje %d obrazen. HP gracza: %d\n", ataki > 1 && i > 0 ? " (dodatkowy atak!)" : "", damage, gracz->HP);
-            }
-            if ((gracz->HP + gracz->bonus_HP) <= 0) {
-                printf(KOLOR_BOLD KOLOR_RED "Gracz zostal pokonany! Koniec gry.\n" KOLOR_RESET);
-                pokaz_podsumowanie(gracz);
-                free(plecak->items);
-                exit(0);
-            }
-        }
-        // Zmiana tury
-        tura_gracza = !tura_gracza;
-        tura_przeciwnika = !tura_przeciwnika;
-    }
-    printf("Walka zakonczona zwyciestwem gracza!\n\n");
-    printf("Wcisnij ENTER aby kontynuowac...");
-    getchar(); getchar();
-}
-
-/* --- LEVEL UP --- */
-void level_up(Postac* gracz) {
-    printf(KOLOR_BOLD KOLOR_GREEN "\nLEVEL UP! Osiagnales poziom %d!\n" KOLOR_RESET, gracz->poziom);
-    printf("Wybierz bonus:\n");
-    printf("1. +10%% do HP\n");
-    printf("2. +10%% do obrazen (sila)\n");
-    printf("3. +10%% do odpornosci\n");
-    printf("4. +10%% do szybkosc\n");
-    int wybor = 0;
-    while (wybor < 1 || wybor > 4) {
-        printf("Twoj wybor: ");
-        scanf("%d", &wybor);
-        int c; while ((c = getchar()) != '\n' && c != EOF) {}
-    }
-    if (wybor == 1) {
-        gracz->HP = (int)(gracz->HP * 1.1);
-        gracz->max_HP = (int)(gracz->max_HP * 1.1);
-        printf("Twoje bazowe HP wzroslo!\n");
-    } else if (wybor == 2) {
-        gracz->sila *= 1.1f;
-        printf("Twoja sila wzrosla!\n");
-    } else if (wybor == 3) {
-        gracz->odp_pancerza *= 1.1f;
-        printf("Twoja odpornosc wzrosla!\n");
-    } else if (wybor == 4) {
-        gracz->szybkosc *= 1.1f;
-        printf("Twoja szybkosc wzrosla!\n");
-    }
-    gracz->xp_do_lvlu += LEVELUP_XP * gracz->poziom; // Zwiększ wymagane XP do kolejnego poziomu
-}
-
-/* --- GENEROWANIE POSTACI --- */
-Postac generuj_postac() {
-    Postac p;
-    p.HP = 100 + rand() % 50;
-    p.max_HP = p.HP; // <-- USTAW MAKSYMALNE HP NA START
-    p.AG = 10 + rand() % 5;
-    p.odp_pancerza = 10 + rand() % 10;
-    p.sila = 14 + rand() % 20;
-    p.mnoznik_hp = 1 + rand() % 5;
-    p.waga = 100 + rand() % 20;
-    p.zasieg_walki = 10 + rand() % 5;
-    p.zasieg_wizji = 50 + rand() % 10;
-    p.XP = rand() % 10;
-    p.szybkosc = 5 + rand() % 10;
-    p.pozycjaX = 1;
-    p.pozycjaY = 1;
-    for (int i = 0; i < SLOT_ILOSC; i++) p.sloty[i] = NULL;
-    p.bonus_HP = 0;
-    p.bonus_sila = 0;
-    p.bonus_odpornosc = 0;
-    p.bonus_szybkosc = 0.0f;
-    p.waluta = 30;
-    p.poziom = 1;
-    p.xp_do_lvlu = LEVELUP_XP;
-    p.szczescie = 1 + rand() % 5;
-    p.liczba_leczen = 0; //liczba uzytych leczen
-    p.liczba_pulapek = 0; //liczba pulapek wpadniętych
-    p.liczba_wrogow = 0; //liczba pokonanych wrogów
-    return p;
-}
-
-Postac generuj_przeciwnika(Postac *gracz) {
-    Postac enemy = generuj_postac();
-    int poziom = gracz->poziom;
-
-    // Losuj czy przeciwnik jest silny czy słaby (np. 30% szans na słabego)
-    int slaby = (rand() % 100 < 30);
-
-    if (slaby) {
-        enemy.HP = 30 + rand() % 20;
-        enemy.sila = 6 + rand() % 5;
-        enemy.odp_pancerza = 2 + rand() % 3;
-    } else {
-        // Skalowanie z poziomem gracza
-        enemy.HP = 40 + poziom * 10 + rand() % (10 + poziom * 2);
-        enemy.sila = 8 + poziom * 2 + rand() % (4 + poziom);
-        enemy.odp_pancerza = 4 + poziom + rand() % (2 + poziom / 2);
-    }
-    enemy.AG = 5 + rand() % 5;
-    enemy.mnoznik_hp = 1;
-    enemy.waga = 50 + rand() % 10;
-    enemy.zasieg_walki = 5 + rand() % 3;
-    enemy.zasieg_wizji = 20 + rand() % 10;
-    enemy.XP = 0;
-    enemy.szybkosc = 3 + rand() % 4;
-    enemy.pozycjaX = 0;
-    enemy.pozycjaY = 0;
-    for (int i = 0; i < SLOT_ILOSC; i++) enemy.sloty[i] = NULL;
-    Przedmiot *bron = malloc(sizeof(Przedmiot));
-    *bron = generuj_przedmiot(gracz);
-    enemy.sloty[SLOT_BRON] = bron;
-    return enemy;
-}
-
-/* --- INFO --- */
-void wyswietl_informacje(Postac* gracz) {
-    printf(KOLOR_BOLD KOLOR_CYAN "╔══════════════════════════════════════════════════╗\n" KOLOR_RESET);
-    printf(KOLOR_BOLD KOLOR_CYAN "║              STATYSTYKI GRACZA                  ║\n" KOLOR_RESET);
-    printf(KOLOR_BOLD KOLOR_CYAN "╚══════════════════════════════════════════════════╝\n" KOLOR_RESET);
-
-    int calkowite_HP = gracz->HP + gracz->bonus_HP;
-    int max_calkowite_HP = gracz->max_HP + gracz->bonus_HP;
-    float calkowita_szybkosc = gracz->szybkosc + gracz->bonus_szybkosc;
-    float calkowita_sila = gracz->sila + gracz->bonus_sila;
-    float procent_hp = (float)calkowite_HP / (float)max_calkowite_HP;
-
-    // Kolorowanie HP
-    const char* kolor_hp;
-    if (procent_hp >= 0.75f) {
-        kolor_hp = KOLOR_GREEN;
-    } else if (procent_hp >= 0.3f) {
-        kolor_hp = KOLOR_YELLOW;
-    } else {
-        kolor_hp = KOLOR_RED;
-    }
-
-    printf(KOLOR_BOLD "Poziom: " KOLOR_RESET "%d\n", gracz->poziom);
-    printf(KOLOR_BOLD "XP:     " KOLOR_RESET "%ld / %d\n", gracz->XP, gracz->xp_do_lvlu);
-    printf(KOLOR_BOLD "Waluta: " KOLOR_RESET "%d\n", gracz->waluta);
-    printf(KOLOR_BOLD "Szczęście: " KOLOR_RESET "%d\n", gracz->szczescie);
-
-    // HP z kolorowaniem
-    printf(KOLOR_BOLD "HP:     " KOLOR_RESET "%s%d%s / %d ", kolor_hp, calkowite_HP, KOLOR_RESET, max_calkowite_HP);
-    printf("(bazowe: %d, bonus: %d)\n", gracz->HP, gracz->bonus_HP);
-
-    // Sloty
-    printf(KOLOR_BOLD "Wyposażenie:\n" KOLOR_RESET);
-    for (int i = 0; i < SLOT_ILOSC; i++) {
-        printf("  %s: ", i == SLOT_BRON ? "Broń   " : i == SLOT_TARCZA ? "Tarcza " : "Zbroja ");
-        if (gracz->sloty[i]) {
-            if (gracz->sloty[i]->rzadkosc == RZAD_LEG)
-                printf(KOLOR_BOLD KOLOR_YELLOW "%s" KOLOR_RESET "\n", gracz->sloty[i]->nazwa);
-            else
-                printf("%s\n", gracz->sloty[i]->nazwa);
-        } else {
-            printf(KOLOR_SZARY "brak" KOLOR_RESET "\n");
-        }
-    }
-
-    printf(KOLOR_BOLD "Statystyki:\n" KOLOR_RESET);
-    printf("  Siła:       " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %d)\n", calkowita_sila, gracz->sila, gracz->bonus_sila);
-    printf("  Odporność:  " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %d)\n", gracz->odp_pancerza + gracz->bonus_odpornosc, gracz->odp_pancerza, gracz->bonus_odpornosc);
-    printf("  Szybkość:   " KOLOR_WHITE "%.2f" KOLOR_RESET " (bazowa: %.2f, bonus: %.2f)\n", calkowita_szybkosc, gracz->szybkosc, gracz->bonus_szybkosc);
-
-    printf(KOLOR_BOLD KOLOR_CYAN "--------------------------------------------------\n" KOLOR_RESET);
-}
-
-
-void pokaz_podsumowanie(Postac* gracz) {
-    printf(KOLOR_BOLD KOLOR_RED "\n=== KONIEC GRY ===\n" KOLOR_RESET);
-    printf("Poziom: %d\n", gracz->poziom);
-    printf("XP: %ld\n", gracz->XP);
-    printf("Pokonanych wrogow: %d\n", gracz->liczba_wrogow);
-    printf("Wpadnietych pulapek: %d\n", gracz->liczba_pulapek);
-    printf("Szczescie: %d\n", gracz->szczescie);
-    printf("Waluta: %d\n", gracz->waluta);
-    printf("Dziekujemy za gre!\n");
-}
-
-void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
-    char filename[64];
-    snprintf(filename, sizeof(filename), "save_%s.sav", gracz->nazwa);
-    FILE* f = fopen(filename, "w");
-    if (!f) {
-        printf("Nie mozna zapisac gry!\n");
-        return;
-    }
-    // Wersja zapisu
-    fprintf(f, "SAVE_VERSION 1\n");
-
-    // Zapisz postac
-    fprintf(f, "%s\n%d %d %d %f %f %lf %d %f %f %ld %f %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
-        gracz->nazwa, gracz->HP, gracz->max_HP, gracz->AG, gracz->odp_pancerza, gracz->sila, gracz->mnoznik_hp,
-        gracz->waga, gracz->zasieg_walki, gracz->zasieg_wizji, gracz->XP, gracz->szybkosc, gracz->pozycjaX, gracz->pozycjaY,
-        gracz->bonus_HP, gracz->bonus_sila, gracz->bonus_odpornosc, gracz->bonus_szybkosc, gracz->waluta, gracz->poziom,
-        gracz->xp_do_lvlu, gracz->szczescie, gracz->liczba_leczen, gracz->liczba_pulapek, gracz->liczba_wrogow,
-        (int)typ_lokacji);
-
-    // Zapisz sloty wyposażenia
-    for (int i = 0; i < SLOT_ILOSC; i++) {
-        if (gracz->sloty[i]) {
-            Przedmiot* it = gracz->sloty[i];
-            fprintf(f, "SLOT %d %s|%d %d %d %d %d %d %f %d %d %d %d %d\n",
-                i,
+        // Zapisz plecak
+        fprintf(f, "%d %d %d %d\n", plecak->count, plecak->capacity, plecak->zajete_miejsce, plecak->max_miejsce);
+        for (int i = 0; i < plecak->count; i++) {
+            Przedmiot* it = &plecak->items[i];
+            fprintf(f, "%s|%d %d %d %d %d %d %f %d %d %d %d %d\n",
                 it->nazwa, it->typ, it->rzadkosc, it->bonus_obrazen, it->bonus_odpornosci, it->bonus_HP, it->bonus_sila,
-                it->bonus_szybkosc, it->waga, it->cena, it->leczenie, it->typ_leczenia, it->typ_amuletu
-            );
-        } else {
-            fprintf(f, "SLOT %d EMPTY\n", i);
+                it->bonus_szybkosc, it->waga, it->cena, it->leczenie, it->typ_leczenia, it->typ_amuletu);
         }
+        fclose(f);
+        printf("Gra zostala zapisana do pliku %s\n", filename);
     }
 
-    // Zapisz mapę
-    fprintf(f, "MAPA %d %d %d\n", mapa->szerokosc, mapa->wysokosc, mapa->czy_jest_kupiec);
-    for (int y = 0; y < mapa->wysokosc; y++) {
-        for (int x = 0; x < mapa->szerokosc; x++) {
-            fprintf(f, "%d ", mapa->komorki[y][x].typ);
+    int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
+        char filename[64];
+        printf("Podaj imie/nazwe postaci do wczytania: ");
+        char nazwa[32];
+        fgets(nazwa, sizeof(nazwa), stdin);
+        nazwa[strcspn(nazwa, "\n")] = 0;
+        snprintf(filename, sizeof(filename), "save_%s.sav", nazwa);
+        FILE* f = fopen(filename, "r");
+        if (!f) {
+            printf("Nie znaleziono pliku zapisu dla postaci %s!\n", nazwa);
+            return 0;
         }
-        fprintf(f, "\n");
-    }
-    // Zapisz NPC
-    fprintf(f, "NPC %d %d %d\n", npc_quest->x, npc_quest->y, npc_quest->aktywny);
+        // Sprawdź wersję zapisu
+        char wersja[32];
+        if (!fgets(wersja, sizeof(wersja), f)) {
+            printf("Blad wczytywania wersji zapisu!\n");
+            fclose(f);
+            return 0;
+        }
+        if (strncmp(wersja, "SAVE_VERSION", 12) != 0) {
+            printf("Nieprawidlowy format pliku zapisu!\n");
+            fclose(f);
+            return 0;
+        }
 
-    // Zapisz plecak
-    fprintf(f, "%d %d %d %d\n", plecak->count, plecak->capacity, plecak->zajete_miejsce, plecak->max_miejsce);
-    for (int i = 0; i < plecak->count; i++) {
-        Przedmiot* it = &plecak->items[i];
-        fprintf(f, "%s|%d %d %d %d %d %d %f %d %d %d %d %d\n",
-            it->nazwa, it->typ, it->rzadkosc, it->bonus_obrazen, it->bonus_odpornosci, it->bonus_HP, it->bonus_sila,
-            it->bonus_szybkosc, it->waga, it->cena, it->leczenie, it->typ_leczenia, it->typ_amuletu);
-    }
-    fclose(f);
-    printf("Gra zostala zapisana do pliku %s\n", filename);
-}
+        // Wczytaj postac
+        if (!fgets(gracz->nazwa, sizeof(gracz->nazwa), f)) {
+            printf("Blad wczytywania pliku (nazwa)!\n");
+            fclose(f);
+            return 0;
+        }
+        gracz->nazwa[strcspn(gracz->nazwa, "\n")] = 0;
+        int typ_lok = 0;
+        int ile = fscanf(f, "%d %d %d %f %f %lf %d %f %f %ld %f %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+            &gracz->HP, &gracz->max_HP, &gracz->AG, &gracz->odp_pancerza, &gracz->sila, &gracz->mnoznik_hp,
+            &gracz->waga, &gracz->zasieg_walki, &gracz->zasieg_wizji, &gracz->XP, &gracz->szybkosc, &gracz->pozycjaX, &gracz->pozycjaY,
+            &gracz->bonus_HP, &gracz->bonus_sila, &gracz->bonus_odpornosc, &gracz->bonus_szybkosc, &gracz->waluta, &gracz->poziom,
+            &gracz->xp_do_lvlu, &gracz->szczescie, &gracz->liczba_leczen, &gracz->liczba_pulapek, &gracz->liczba_wrogow,
+            &typ_lok);
 
-int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
-    char filename[64];
-    printf("Podaj imie/nazwe postaci do wczytania: ");
-    char nazwa[32];
-    fgets(nazwa, sizeof(nazwa), stdin);
-    nazwa[strcspn(nazwa, "\n")] = 0;
-    snprintf(filename, sizeof(filename), "save_%s.sav", nazwa);
-    FILE* f = fopen(filename, "r");
-    if (!f) {
-        printf("Nie znaleziono pliku zapisu dla postaci %s!\n", nazwa);
-        return 0;
-    }
-    // Sprawdź wersję zapisu
-    char wersja[32];
-    if (!fgets(wersja, sizeof(wersja), f)) {
-        printf("Blad wczytywania wersji zapisu!\n");
-        fclose(f);
-        return 0;
-    }
-    if (strncmp(wersja, "SAVE_VERSION", 12) != 0) {
-        printf("Nieprawidlowy format pliku zapisu!\n");
-        fclose(f);
-        return 0;
-    }
+        if (ile < 24) {
+            printf("Blad wczytywania pliku (statystyki postaci)!\n");
+            fclose(f);
+            return 0;
+        }
+        if (ile == 24) typ_lok = 0; // domyślnie LOKACJA_LAS
+        *typ_lokacji = (TypLokacji)typ_lok;
 
-    // Wczytaj postac
-    if (!fgets(gracz->nazwa, sizeof(gracz->nazwa), f)) {
-        printf("Blad wczytywania pliku (nazwa)!\n");
-        fclose(f);
-        return 0;
-    }
-    gracz->nazwa[strcspn(gracz->nazwa, "\n")] = 0;
-    int typ_lok = 0;
-    int ile = fscanf(f, "%d %d %d %f %f %lf %d %f %f %ld %f %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-        &gracz->HP, &gracz->max_HP, &gracz->AG, &gracz->odp_pancerza, &gracz->sila, &gracz->mnoznik_hp,
-        &gracz->waga, &gracz->zasieg_walki, &gracz->zasieg_wizji, &gracz->XP, &gracz->szybkosc, &gracz->pozycjaX, &gracz->pozycjaY,
-        &gracz->bonus_HP, &gracz->bonus_sila, &gracz->bonus_odpornosc, &gracz->bonus_szybkosc, &gracz->waluta, &gracz->poziom,
-        &gracz->xp_do_lvlu, &gracz->szczescie, &gracz->liczba_leczen, &gracz->liczba_pulapek, &gracz->liczba_wrogow,
-        &typ_lok);
-
-    if (ile < 24) {
-        printf("Blad wczytywania pliku (statystyki postaci)!\n");
-        fclose(f);
-        return 0;
-    }
-    if (ile == 24) typ_lok = 0; // domyślnie LOKACJA_LAS
-    *typ_lokacji = (TypLokacji)typ_lok;
-
-    // Wczytaj sloty wyposażenia
-    for (int i = 0; i < SLOT_ILOSC; i++) {
+        // Wczytaj sloty wyposażenia
+        for (int i = 0; i < SLOT_ILOSC; i++) {
         char linia_slot[256];
         if (!fgets(linia_slot, sizeof(linia_slot), f)) {
             gracz->sloty[i] = NULL;
@@ -1469,11 +1519,15 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
             gracz->sloty[i] = NULL;
         } else {
             char buf[50];
-            Przedmiot *it = malloc(sizeof(Przedmiot)); // Poprawka: alokuj pamięć!
-            int ret = sscanf(linia_slot, "SLOT %d %49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d",
-                &idx, buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP,
-                &it->bonus_sila, &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie, &it->typ_leczenia, &it->typ_amuletu);
-            if (ret == 14) {
+            Przedmiot *it = malloc(sizeof(Przedmiot));
+            int ret = sscanf(
+                linia_slot,
+                "SLOT %*d %49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d %d",
+                buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP,
+                &it->bonus_sila, &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie,
+                &it->typ_leczenia, &it->typ_amuletu
+            );
+            if (ret == 13) {
                 strncpy(it->nazwa, buf, sizeof(it->nazwa) - 1);
                 it->nazwa[sizeof(it->nazwa) - 1] = '\0';
                 gracz->sloty[i] = it;
@@ -1483,71 +1537,170 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
             }
         }
     }
-
-    // Wczytaj mapę
-    int szer, wys, czy_kupiec;
-    if (fscanf(f, "MAPA %d %d %d\n", &szer, &wys, &czy_kupiec) != 3) {
-        printf("Blad wczytywania mapy!\n");
-        fclose(f);
-        return 0;
-    }
-    mapa->szerokosc = szer;
-    mapa->wysokosc = wys;
-    mapa->czy_jest_kupiec = czy_kupiec;
-    for (int y = 0; y < mapa->wysokosc; y++) {
-        for (int x = 0; x < mapa->szerokosc; x++) {
-            int typ;
-            fscanf(f, "%d", &typ);
-            mapa->komorki[y][x].typ = (TypKomorki)typ;
+        // Po wczytaniu slotów, dolicz bonusy do postaci!
+        gracz->bonus_HP = 0;
+        gracz->bonus_sila = 0;
+        gracz->bonus_odpornosc = 0;
+        gracz->bonus_szybkosc = 0.0f;
+        for (int i = 0; i < SLOT_ILOSC; i++) {
+            if (gracz->sloty[i]) {
+                zastosuj_bonusy(gracz, gracz->sloty[i]);
+            }
         }
-    }
-    char linia[64];
-    fgets(linia, sizeof(linia), f); // przejdź do nowej linii po mapie
 
-    // Wczytaj NPC
-    if (fscanf(f, "NPC %d %d %d\n", &npc_quest->x, &npc_quest->y, &npc_quest->aktywny) != 3) {
-        npc_quest->x = npc_quest->y = npc_quest->aktywny = 0;
-    }
-
-    // Wczytaj plecak
-    if (!fgets(linia, sizeof(linia), f)) {
-        printf("Brak linii plecaka!\n");
-        fclose(f);
-        return 0;
-    }
-    if (sscanf(linia, "%d %d %d %d", &plecak->count, &plecak->capacity, &plecak->zajete_miejsce, &plecak->max_miejsce) != 4) {
-        printf("Blad wczytywania pliku (plecak)!\n");
-        fclose(f);
-        return 0;
-    }
-    if (plecak->capacity < plecak->count) {
-        plecak->capacity = plecak->count;
-    }
-    if (plecak->items == NULL) {
-        plecak->items = malloc(plecak->capacity * sizeof(Przedmiot));
-    } else {
-        plecak->items = realloc(plecak->items, plecak->capacity * sizeof(Przedmiot));
-    }
-    for (int i = 0; i < plecak->count; i++) {
-        Przedmiot* it = &plecak->items[i];
-        char buf[50];
-        int ret = fscanf(f, "%49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d\n",
-            buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP, &it->bonus_sila,
-            &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie, &it->typ_leczenia, &it->typ_amuletu);
-        if (ret != 13) {
-            printf("Blad wczytywania przedmiotu z plecaka!\n");
+        // Wczytaj mapę
+        int szer, wys, czy_kupiec;
+        if (fscanf(f, "MAPA %d %d %d\n", &szer, &wys, &czy_kupiec) != 3) {
+            printf("Blad wczytywania mapy!\n");
             fclose(f);
             return 0;
         }
-        strncpy(it->nazwa, buf, sizeof(it->nazwa) - 1);
-        it->nazwa[sizeof(it->nazwa) - 1] = '\0';
+        mapa->szerokosc = szer;
+        mapa->wysokosc = wys;
+        mapa->czy_jest_kupiec = czy_kupiec;
+        for (int y = 0; y < mapa->wysokosc; y++) {
+            for (int x = 0; x < mapa->szerokosc; x++) {
+                int typ;
+                fscanf(f, "%d", &typ);
+                mapa->komorki[y][x].typ = (TypKomorki)typ;
+            }
+        }
+        char linia[64];
+        fgets(linia, sizeof(linia), f); // przejdź do nowej linii po mapie
+
+        // Wczytaj NPC
+        if (fscanf(f, "NPC %d %d %d\n", &npc_quest->x, &npc_quest->y, &npc_quest->aktywny) != 3) {
+            npc_quest->x = npc_quest->y = npc_quest->aktywny = 0;
+        }
+
+        // Wczytaj plecak
+        if (!fgets(linia, sizeof(linia), f)) {
+            printf("Brak linii plecaka!\n");
+            fclose(f);
+            return 0;
+        }
+        if (sscanf(linia, "%d %d %d %d", &plecak->count, &plecak->capacity, &plecak->zajete_miejsce, &plecak->max_miejsce) != 4) {
+            printf("Blad wczytywania pliku (plecak)!\n");
+            fclose(f);
+            return 0;
+        }
+        if (plecak->capacity < plecak->count) {
+            plecak->capacity = plecak->count;
+        }
+        if (plecak->items == NULL) {
+            plecak->items = malloc(plecak->capacity * sizeof(Przedmiot));
+        } else {
+            plecak->items = realloc(plecak->items, plecak->capacity * sizeof(Przedmiot));
+        }
+        for (int i = 0; i < plecak->count; i++) {
+            Przedmiot* it = &plecak->items[i];
+            char buf[50];
+            int ret = fscanf(f, "%49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d\n",
+                buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP, &it->bonus_sila,
+                &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie, &it->typ_leczenia, &it->typ_amuletu);
+            if (ret != 13) {
+                printf("Blad wczytywania przedmiotu z plecaka!\n");
+                fclose(f);
+                return 0;
+            }
+            strncpy(it->nazwa, buf, sizeof(it->nazwa) - 1);
+            it->nazwa[sizeof(it->nazwa) - 1] = '\0';
+        }
+        fclose(f);
+        printf("Gra zostala wczytana z pliku %s\n", filename);
+        return 1;
     }
-    fclose(f);
-    printf("Gra zostala wczytana z pliku %s\n", filename);
-    return 1;
-}
-/* --- MAIN --- */
-int main() {
+
+    void porusz_wrogow(Mapa* mapa, int graczX, int graczY) {
+        int dx[] = {0, 1, 0, -1};
+        int dy[] = {-1, 0, 1, 0};
+        int nowe_typy[MAX_WYSOKOSC][MAX_SZEROKOSC] = {0};
+
+        // Skopiuj aktualne typy do pomocniczej tablicy
+        for (int y = 0; y < mapa->wysokosc; y++)
+            for (int x = 0; x < mapa->szerokosc; x++)
+                nowe_typy[y][x] = mapa->komorki[y][x].typ;
+
+            for (int y = 0; y < mapa->wysokosc; y++) {
+            for (int x = 0; x < mapa->szerokosc; x++) {
+                if (mapa->komorki[y][x].typ == PRZECIWNIK) {
+                    int dystans = abs(graczX - x) + abs(graczY - y);
+                    int moved = 0; // <-- DODAJ TO!
+                    if (dystans <= 3) {
+                        int best_dir = -1;
+                        int best_dist = dystans;
+                        for (int d = 0; d < 4; d++) {
+                            int nx = x + dx[d];
+                            int ny = y + dy[d];
+                            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                                if (mapa->komorki[ny][nx].typ == PUSTE && nowe_typy[ny][nx] != PRZECIWNIK) {
+                                    int new_dist = abs(graczX - nx) + abs(graczY - ny);
+                                    if (new_dist < best_dist) {
+                                        best_dist = new_dist;
+                                        best_dir = d;
+                                    }
+                                }
+                                else if (nx == graczX && ny == graczY) {
+                                    best_dir = d;
+                                    best_dist = 0;
+                                }
+                            }
+                        }
+                        if (best_dir != -1) {
+                            int nx = x + dx[best_dir];
+                            int ny = y + dy[best_dir];
+                            nowe_typy[ny][nx] = PRZECIWNIK;
+                            nowe_typy[y][x] = PUSTE;
+                            moved = 1;
+                        }
+                    }
+                    // Jeśli nie ruszył się w stronę gracza, porusz się losowo
+                    if (!moved) {
+                        int kierunki[4] = {0, 1, 2, 3};
+                        for (int i = 3; i > 0; i--) {
+                            int j = rand() % (i + 1);
+                            int tmp = kierunki[i];
+                            kierunki[i] = kierunki[j];
+                            kierunki[j] = tmp;
+                        }
+                        for (int d = 0; d < 4; d++) {
+                            int nx = x + dx[kierunki[d]];
+                            int ny = y + dy[kierunki[d]];
+                            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                                if (mapa->komorki[ny][nx].typ == PUSTE && nowe_typy[ny][nx] != PRZECIWNIK && !(nx == graczX && ny == graczY)) {
+                                    nowe_typy[ny][nx] = PRZECIWNIK;
+                                    nowe_typy[y][x] = PUSTE;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Przepisz nowe typy na mapę
+        for (int y = 0; y < mapa->wysokosc; y++)
+            for (int x = 0; x < mapa->szerokosc; x++)
+                mapa->komorki[y][x].typ = (TypKomorki)nowe_typy[y][x];
+    }
+
+    int gracz_obok_przeciwnika(Mapa* mapa, int x, int y) {
+        int dx[] = {0, 1, 0, -1};
+        int dy[] = {-1, 0, 1, 0};
+        for (int i = 0; i < 4; i++) {
+            int nx = x + dx[i];
+            int ny = y + dy[i];
+            if (nx >= 0 && nx < mapa->szerokosc && ny >= 0 && ny < mapa->wysokosc) {
+                if (mapa->komorki[ny][nx].typ == PRZECIWNIK) {
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+
+    /* --- MAIN --- */
+    int main() {
     #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     #endif
@@ -1584,7 +1737,7 @@ int main() {
 
     Quest quest = (Quest){QUEST_BRAK, 0, 0, 0, 0};
 
-// Poprawka: generuj mapę tylko jeśli NIE wczytano gry!
+    // Generuj mapę tylko jeśli NIE wczytano gry!
     if (!loaded) {
         generuj_przechodna_mape(&mapa, &typ_lokacji);
         if (typ_lokacji == LOKACJA_WIOSKA) {
@@ -1592,14 +1745,6 @@ int main() {
         } else {
             npc_quest.aktywny = 0;
         }
-    }
-
-    generuj_przechodna_mape(&mapa, &typ_lokacji);
-
-    if (typ_lokacji == LOKACJA_WIOSKA) {
-        losuj_pozycje_npc(&mapa, &npc_quest);
-    } else {
-        npc_quest.aktywny = 0;
     }
 
     while (1) {
@@ -1625,6 +1770,78 @@ int main() {
             continue;
         }
 
+        // <<< TUTAJ poruszają się wrogowie po ruchu gracza >>>
+        porusz_wrogow(&mapa, gracz.pozycjaX, gracz.pozycjaY);
+
+        // Zapamiętaj, czy na polu była brama
+        int byla_brama = (mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ == BRAMA);
+
+        if (mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ == PRZECIWNIK) {
+            Postac przeciwnik = generuj_przeciwnika(&gracz);
+            walka(&gracz, &przeciwnik, &plecak);
+            for (int i = 0; i < SLOT_ILOSC; i++)
+                if (przeciwnik.sloty[i]) free(przeciwnik.sloty[i]);
+            // Po walce: jeśli była brama, przywróć bramę, inaczej puste pole
+            if (byla_brama)
+                mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ = BRAMA;
+            else
+                mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ = PUSTE;
+            if (gracz_ma_legendarny_amulet(&plecak)) {
+                int max_hp = gracz.max_HP + gracz.bonus_HP;
+                int przed = gracz.HP;
+                gracz.HP += 10;
+                if (gracz.HP > max_hp) gracz.HP = max_hp;
+                printf(KOLOR_GREEN "Amulet Regeneracji leczy cie o 10 HP po walce! (HP: %d -> %d)\n" KOLOR_RESET, przed, gracz.HP);
+                printf("Wcisnij ENTER aby kontynuowac...");
+                getchar(); getchar();
+            }
+        }
+
+        if (gracz_obok_przeciwnika(&mapa, gracz.pozycjaX, gracz.pozycjaY)) {
+            // Znajdź pierwszego sąsiadującego przeciwnika i sprawdź, czy to brama
+            int dx[] = {0, 1, 0, -1};
+            int dy[] = {-1, 0, 1, 0};
+            int brama_obok = 0;
+            int przeciwnikX = -1, przeciwnikY = -1;
+            for (int i = 0; i < 4; i++) {
+                int nx = gracz.pozycjaX + dx[i];
+                int ny = gracz.pozycjaY + dy[i];
+                if (nx >= 0 && nx < mapa.szerokosc && ny >= 0 && ny < mapa.wysokosc) {
+                    if (mapa.komorki[ny][nx].typ == PRZECIWNIK) {
+                        przeciwnikX = nx;
+                        przeciwnikY = ny;
+                        // Sprawdź, czy na tym polu była brama
+                        if (mapa.komorki[ny][nx].typ == BRAMA)
+                            brama_obok = 1;
+                        break;
+                    }
+                }
+            }
+            if (przeciwnikX != -1 && przeciwnikY != -1) {
+                Postac przeciwnik = generuj_przeciwnika(&gracz);
+                walka(&gracz, &przeciwnik, &plecak);
+                for (int i = 0; i < SLOT_ILOSC; i++)
+                    if (przeciwnik.sloty[i]) free(przeciwnik.sloty[i]);
+                // Po walce: jeśli była brama, przywróć bramę, inaczej puste pole
+                if (brama_obok)
+                    mapa.komorki[przeciwnikY][przeciwnikX].typ = BRAMA;
+                else
+                    mapa.komorki[przeciwnikY][przeciwnikX].typ = PUSTE;
+                if (gracz_ma_legendarny_amulet(&plecak)) {
+                    int max_hp = gracz.max_HP + gracz.bonus_HP;
+                    int przed = gracz.HP;
+                    gracz.HP += 10;
+                    if (gracz.HP > max_hp) gracz.HP = max_hp;
+                    printf(KOLOR_GREEN "Amulet Regeneracji leczy cie o 10 HP po walce! (HP: %d -> %d)\n" KOLOR_RESET, przed, gracz.HP);
+                    printf("Wcisnij ENTER aby kontynuowac...");
+                    getchar(); getchar();
+                }
+            }
+        }
+
+        // Teraz sprawdzaj pole, na którym stoi gracz
+        TypKomorki aktualna = mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ;
+
         // NAJPIERW KUPIEC!
         if (typ_lokacji == LOKACJA_WIOSKA && mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0) {
             sklep(&gracz, &plecak);
@@ -1643,7 +1860,6 @@ int main() {
             continue;
         }
 
-        TypKomorki aktualna = mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ;
         if (typ_lokacji == LOKACJA_WIOSKA && mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0) {
             sklep(&gracz, &plecak);
             gracz.pozycjaX = oldX;
@@ -1651,20 +1867,7 @@ int main() {
             continue;
         }
         if (aktualna == PRZECIWNIK) {
-            Postac przeciwnik = generuj_przeciwnika(&gracz);
-            walka(&gracz, &przeciwnik, &plecak);
-            for (int i = 0; i < SLOT_ILOSC; i++)
-                if (przeciwnik.sloty[i]) free(przeciwnik.sloty[i]);
-            mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ = PUSTE;
-            if (gracz_ma_legendarny_amulet(&plecak)) {
-                int max_hp = gracz.max_HP + gracz.bonus_HP;
-                int przed = gracz.HP;
-                gracz.HP += 10;
-                if (gracz.HP > max_hp) gracz.HP = max_hp;
-                printf(KOLOR_GREEN "Amulet Regeneracji leczy cie o 10 HP po walce! (HP: %d -> %d)\n" KOLOR_RESET, przed, gracz.HP);
-                printf("Wcisnij ENTER aby kontynuowac...");
-                getchar(); getchar();
-            }
+            // To już obsłużyliśmy wyżej, więc pomiń
         } else if (aktualna == SKARB) {
             printf(KOLOR_BOLD KOLOR_MAGENTA "Znalazles skarb! Zdobywasz 50 XP.\n" KOLOR_RESET);
             gracz.XP += 50;
