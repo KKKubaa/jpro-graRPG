@@ -654,18 +654,18 @@
                 mapa->wysokosc = 8;
         }
         if (typ_lokacji == LOKACJA_WIOSKA)
-            mapa->czy_jest_kupiec = (rand() % 100 < 85) ? 1 : 0; // 85% szans na kupca
+            mapa->czy_jest_kupiec = (rand() % 100 < 85) ? 1 : 0; // 85% szans na kupca      //nie aktualne - jest 100% na kupca
         else
             mapa->czy_jest_kupiec = 0;
 
         for (int y = 0; y < mapa->wysokosc; y++) {
             for (int x = 0; x < mapa->szerokosc; x++) {
                 int wartosc_losowa = rand() % 100;
-                if (wartosc_losowa < 30)
+                if (wartosc_losowa < 15)
                     mapa->komorki[y][x].typ = SCIANA;
-                else if (wartosc_losowa < 34) // mniej pułapek
+                else if (wartosc_losowa < 19) 
                     mapa->komorki[y][x].typ = PULAPKA;
-                else if (wartosc_losowa < 38) // mniej przeciwników
+                else if (wartosc_losowa < 23) 
                     mapa->komorki[y][x].typ = PRZECIWNIK;
                 else
                     mapa->komorki[y][x].typ = PUSTE;
@@ -691,7 +691,6 @@
 
         // --- GWARANCJA BRAMY ---
         int bramaX = -1, bramaY = -1;
-        // Najpierw szukaj pustego pola
         for (int i = 0; i < 100; i++) {
             int x = rand() % mapa->szerokosc;
             int y = rand() % mapa->wysokosc;
@@ -701,7 +700,6 @@
                 break;
             }
         }
-        // Jeśli nie ma pustego pola, zamień losowe pole nie-ściana na bramę
         if (bramaX == -1) {
             for (int i = 0; i < 100; i++) {
                 int x = rand() % mapa->szerokosc;
@@ -777,7 +775,7 @@
         printf("+\n");
     }
 
-    /* --- BFS --- */
+    /* --- BFS --- */  //sprawdza czy mape da sie przejsc
     int is_map_traversable(Mapa* mapa, int startX, int startY) {
         int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
         Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
@@ -1129,8 +1127,6 @@
 
     void pokaz_podsumowanie(Postac* gracz);
 
-    // --- Zastąp całą funkcję walka poniższą wersją, aby szybkość wpływała na kolejność i dodatkowy atak ---
-
     void walka(Postac* gracz, Postac* przeciwnik, Plecak *plecak) {
         printf(KOLOR_BOLD KOLOR_RED "Napotykasz przeciwnika! Walka rozpoczeta!\n" KOLOR_RESET);
 
@@ -1207,9 +1203,8 @@
                     gracz->HP -= damage;
                     printf("Przeciwnik atakuje%s i zadaje %d obrazen. HP gracza: %d\n", ataki > 1 && i > 0 ? " (dodatkowy atak!)" : "", damage, gracz->HP);
 
-                    // DODAJ: automatyczne użycie leczenia jeśli gracz miałby zginąć
+                    // automatyczne użycie leczenia jeśli gracz miałby zginąć
                     if ((gracz->HP + gracz->bonus_HP) <= 0) {
-                        // Szukaj mikstury w plecaku
                         int found = 0;
                         for (int idx = 0; idx < plecak->count; idx++) {
                             if (plecak->items[idx].typ == PRZEDMIOT_LECZENIE) {
@@ -1271,14 +1266,14 @@
             gracz->szybkosc *= 1.1f;
             printf("Twoja szybkosc wzrosla!\n");
         }
-        gracz->xp_do_lvlu += LEVELUP_XP * gracz->poziom; // Zwiększ wymagane XP do kolejnego poziomu
+        gracz->xp_do_lvlu += LEVELUP_XP * gracz->poziom; // Zwiększenie wymagania XP do kolejnego poziomu
     }
 
     /* --- GENEROWANIE POSTACI --- */
     Postac generuj_postac() {
         Postac p;
         p.HP = 100 + rand() % 50;
-        p.max_HP = p.HP; // <-- USTAW MAKSYMALNE HP NA START
+        p.max_HP = p.HP; 
         p.AG = 10 + rand() % 5;
         p.odp_pancerza = 10 + rand() % 10;
         p.sila = 14 + rand() % 20;
@@ -1309,7 +1304,7 @@
         Postac enemy = generuj_postac();
         int poziom = gracz->poziom;
 
-        // Losuj czy przeciwnik jest silny czy słaby (np. 30% szans na słabego)
+        // Losuj czy przeciwnik jest silny czy słaby (30% szans na słabego)
         int slaby = (rand() % 100 < 30);
 
         if (slaby) {
@@ -1341,7 +1336,7 @@
     /* --- INFO --- */
     void wyswietl_informacje(Postac* gracz) {
         printf(KOLOR_BOLD KOLOR_CYAN "╔══════════════════════════════════════════════════╗\n" KOLOR_RESET);
-        printf(KOLOR_BOLD KOLOR_CYAN "║              STATYSTYKI GRACZA                  ║\n" KOLOR_RESET);
+        printf(KOLOR_BOLD KOLOR_CYAN "║              STATYSTYKI GRACZA                   ║\n" KOLOR_RESET);
         printf(KOLOR_BOLD KOLOR_CYAN "╚══════════════════════════════════════════════════╝\n" KOLOR_RESET);
 
         int calkowite_HP = gracz->HP + gracz->bonus_HP;
@@ -1509,34 +1504,34 @@
 
         // Wczytaj sloty wyposażenia
         for (int i = 0; i < SLOT_ILOSC; i++) {
-        char linia_slot[256];
-        if (!fgets(linia_slot, sizeof(linia_slot), f)) {
-            gracz->sloty[i] = NULL;
-            continue;
-        }
-        int idx;
-        if (sscanf(linia_slot, "SLOT %d EMPTY", &idx) == 1) {
-            gracz->sloty[i] = NULL;
-        } else {
-            char buf[50];
-            Przedmiot *it = malloc(sizeof(Przedmiot));
-            int ret = sscanf(
-                linia_slot,
-                "SLOT %*d %49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d %d",
-                buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP,
-                &it->bonus_sila, &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie,
-                &it->typ_leczenia, &it->typ_amuletu
-            );
-            if (ret == 13) {
-                strncpy(it->nazwa, buf, sizeof(it->nazwa) - 1);
-                it->nazwa[sizeof(it->nazwa) - 1] = '\0';
-                gracz->sloty[i] = it;
-            } else {
-                free(it);
+            char linia_slot[256];
+            if (!fgets(linia_slot, sizeof(linia_slot), f)) {
                 gracz->sloty[i] = NULL;
+                continue;
+            }
+            int idx;
+            if (sscanf(linia_slot, "SLOT %d EMPTY", &idx) == 1) {
+                gracz->sloty[i] = NULL;
+            } else {
+                Przedmiot *it = malloc(sizeof(Przedmiot));
+                char buf[50];
+                int ret = sscanf(
+                    linia_slot,
+                    "SLOT %d %49[^|]|%d %d %d %d %d %d %f %d %d %d %d %d %d",
+                    &idx, buf, &it->typ, &it->rzadkosc, &it->bonus_obrazen, &it->bonus_odpornosci, &it->bonus_HP,
+                    &it->bonus_sila, &it->bonus_szybkosc, &it->waga, &it->cena, &it->leczenie,
+                    &it->typ_leczenia, &it->typ_amuletu
+                );
+                if (ret == 14) {
+                    strncpy(it->nazwa, buf, sizeof(it->nazwa) - 1);
+                    it->nazwa[sizeof(it->nazwa) - 1] = '\0';
+                    gracz->sloty[i] = it;
+                } else {
+                    free(it);
+                    gracz->sloty[i] = NULL;
+                }
             }
         }
-    }
         // Po wczytaniu slotów, dolicz bonusy do postaci!
         gracz->bonus_HP = 0;
         gracz->bonus_sila = 0;
@@ -1566,7 +1561,7 @@
             }
         }
         char linia[64];
-        fgets(linia, sizeof(linia), f); // przejdź do nowej linii po mapie
+        fgets(linia, sizeof(linia), f);
 
         // Wczytaj NPC
         if (fscanf(f, "NPC %d %d %d\n", &npc_quest->x, &npc_quest->y, &npc_quest->aktywny) != 3) {
@@ -1616,7 +1611,6 @@
         int dy[] = {-1, 0, 1, 0};
         int nowe_typy[MAX_WYSOKOSC][MAX_SZEROKOSC] = {0};
 
-        // Skopiuj aktualne typy do pomocniczej tablicy
         for (int y = 0; y < mapa->wysokosc; y++)
             for (int x = 0; x < mapa->szerokosc; x++)
                 nowe_typy[y][x] = mapa->komorki[y][x].typ;
@@ -1654,7 +1648,7 @@
                             moved = 1;
                         }
                     }
-                    // Jeśli nie ruszył się w stronę gracza, porusz się losowo
+                    // Jeśli PRZECIWNIK nie ruszył się w stronę gracza, porusz go losowo
                     if (!moved) {
                         int kierunki[4] = {0, 1, 2, 3};
                         for (int i = 3; i > 0; i--) {
@@ -1678,7 +1672,6 @@
                 }
             }
         }
-        // Przepisz nowe typy na mapę
         for (int y = 0; y < mapa->wysokosc; y++)
             for (int x = 0; x < mapa->szerokosc; x++)
                 mapa->komorki[y][x].typ = (TypKomorki)nowe_typy[y][x];
@@ -1770,10 +1763,9 @@
             continue;
         }
 
-        // <<< TUTAJ poruszają się wrogowie po ruchu gracza >>>
+        // <<< poruszanie się wrogow po ruchu gracza >>>
         porusz_wrogow(&mapa, gracz.pozycjaX, gracz.pozycjaY);
 
-        // Zapamiętaj, czy na polu była brama
         int byla_brama = (mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ == BRAMA);
 
         if (mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ == PRZECIWNIK) {
@@ -1781,7 +1773,6 @@
             walka(&gracz, &przeciwnik, &plecak);
             for (int i = 0; i < SLOT_ILOSC; i++)
                 if (przeciwnik.sloty[i]) free(przeciwnik.sloty[i]);
-            // Po walce: jeśli była brama, przywróć bramę, inaczej puste pole
             if (byla_brama)
                 mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ = BRAMA;
             else
@@ -1798,7 +1789,6 @@
         }
 
         if (gracz_obok_przeciwnika(&mapa, gracz.pozycjaX, gracz.pozycjaY)) {
-            // Znajdź pierwszego sąsiadującego przeciwnika i sprawdź, czy to brama
             int dx[] = {0, 1, 0, -1};
             int dy[] = {-1, 0, 1, 0};
             int brama_obok = 0;
@@ -1810,7 +1800,6 @@
                     if (mapa.komorki[ny][nx].typ == PRZECIWNIK) {
                         przeciwnikX = nx;
                         przeciwnikY = ny;
-                        // Sprawdź, czy na tym polu była brama
                         if (mapa.komorki[ny][nx].typ == BRAMA)
                             brama_obok = 1;
                         break;
@@ -1822,7 +1811,6 @@
                 walka(&gracz, &przeciwnik, &plecak);
                 for (int i = 0; i < SLOT_ILOSC; i++)
                     if (przeciwnik.sloty[i]) free(przeciwnik.sloty[i]);
-                // Po walce: jeśli była brama, przywróć bramę, inaczej puste pole
                 if (brama_obok)
                     mapa.komorki[przeciwnikY][przeciwnikX].typ = BRAMA;
                 else
@@ -1839,10 +1827,9 @@
             }
         }
 
-        // Teraz sprawdzaj pole, na którym stoi gracz
         TypKomorki aktualna = mapa.komorki[gracz.pozycjaY][gracz.pozycjaX].typ;
 
-        // NAJPIERW KUPIEC!
+        //  KUPIEC!
         if (typ_lokacji == LOKACJA_WIOSKA && mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0) {
             sklep(&gracz, &plecak);
             gracz.pozycjaX = oldX;
@@ -1850,7 +1837,7 @@
             continue;
         }
 
-        // POTEM NPC, ALE NIE NA (0,0) GDZIE JEST KUPIEC
+        //  NPC, ALE NIE NA (0,0) GDZIE JEST KUPIEC
         if (typ_lokacji == LOKACJA_WIOSKA && npc_quest.aktywny &&
             gracz.pozycjaX == npc_quest.x && gracz.pozycjaY == npc_quest.y &&
             !(mapa.czy_jest_kupiec && gracz.pozycjaX == 0 && gracz.pozycjaY == 0)) {
@@ -1867,7 +1854,6 @@
             continue;
         }
         if (aktualna == PRZECIWNIK) {
-            // To już obsłużyliśmy wyżej, więc pomiń
         } else if (aktualna == SKARB) {
             printf(KOLOR_BOLD KOLOR_MAGENTA "Znalazles skarb! Zdobywasz 50 XP.\n" KOLOR_RESET);
             gracz.XP += 50;
@@ -1941,7 +1927,7 @@
             generuj_przechodna_mape(&mapa, &typ_lokacji);
             gracz.pozycjaX = 1;
             gracz.pozycjaY = 1;
-            // Po wygenerowaniu nowej mapy, losuj NPC w wiosce
+            // Po wygenerowaniu nowej mapy, losuje sie NPC w wiosce
             if (typ_lokacji == LOKACJA_WIOSKA) {
                 losuj_pozycje_npc(&mapa, &npc_quest);
             } else {
