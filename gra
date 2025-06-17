@@ -38,6 +38,7 @@
 
     #define LIMIT_LECZENIA 10
 
+    // --- Stałe dotyczące rozgrywki ---
     typedef enum {
         LOKACJA_LAS,
         LOKACJA_WIOSKA,
@@ -47,6 +48,7 @@
         LOKACJA_RUINY
     } TypLokacji;
 
+    // --- Tablica nazw lokacji do czytelnego wyświetlania ---
     const char* nazwy_lokacji[] = {
         "Las",
         "Wioska",
@@ -60,15 +62,17 @@
         PUSTE, SCIANA, SKARB, PULAPKA, PRZECIWNIK, BRAMA, SKARB_SPEC
     } TypKomorki;
 
+    // --- Struktura opisująca pojedynczą komórkę mapy ---
     typedef struct {
-        TypKomorki typ;
+        TypKomorki typ;     // typ komórki: puste, ściana, skarb, itp.
     } KomorkaMapy;
 
+    // --- Struktura mapy (planszy) ---
     typedef struct {
         int szerokosc;
         int wysokosc;
         KomorkaMapy komorki[MAX_WYSOKOSC][MAX_SZEROKOSC];
-        int czy_jest_kupiec;
+        int czy_jest_kupiec;        // czy na mapie jest kupiec (jest 100% na kupca)
     } Mapa;
 
     typedef enum {
@@ -132,6 +136,7 @@
         AMULET_LEGENDARNY
     } TypAmuletu;
 
+    // --- Struktura przedmiotu (ekwipunku, mikstury, amuletu) ---
     typedef struct {
         char nazwa[50];
         TypPrzedmiotu typ;
@@ -148,14 +153,16 @@
         TypAmuletu typ_amuletu;
     } Przedmiot;
 
+    // --- Struktura plecaka (dynamiczna tablica przedmiotów) ---
     typedef struct {
-        Przedmiot *items;
-        int count;
-        int capacity;
-        int zajete_miejsce;
-        int max_miejsce;
+        Przedmiot *items; // wskaźnik na dynamiczną tablicę przedmiotów
+        int count;        // liczba przedmiotów w plecaku
+        int capacity;     // aktualna pojemność tablicy
+        int zajete_miejsce; // suma wag przedmiotów
+        int max_miejsce;    // maksymalna pojemność plecaka
     } Plecak;
 
+    // --- Struktura postaci gracza/przeciwnika ---
     typedef struct {
         char nazwa[32];
         int HP;
@@ -171,7 +178,7 @@
         float szybkosc;
         int pozycjaX;
         int pozycjaY;
-        Przedmiot* sloty[SLOT_ILOSC];
+        Przedmiot* sloty[SLOT_ILOSC];       // wskaźniki na wyposażone przedmioty
         int bonus_HP;
         int bonus_sila;
         int bonus_odpornosc;
@@ -199,7 +206,7 @@
         int y;
     } Pozycja;
 
-
+    // --- Funkcja czyszcząca ekran konsoli ---
     void czysc_ekran() {
     #ifdef _WIN32
         system("cls");
@@ -208,6 +215,7 @@
     #endif
     }
 
+    // Funkcja wskaźnikowa - inicjalizuje plecak przez wskaźnik
     void init_plecak(Plecak *plecak, int max_miejsce) {
         plecak->capacity = 8;
         plecak->items = malloc(plecak->capacity * sizeof(Przedmiot));
@@ -216,14 +224,17 @@
         plecak->max_miejsce = max_miejsce;
     }
 
+    // Funkcja wskaźnikowa - powiększa plecak przez wskaźnik
     void powieksz_plecak(Plecak *plecak) {
         plecak->capacity *= 2;
         plecak->items = realloc(plecak->items, plecak->capacity * sizeof(Przedmiot));
     }
 
+    // Funkcja wskaźnikowa - sprawdza czy gracz ma legendarny amulet (przez wskaźnik)
     int gracz_ma_legendarny_amulet(Plecak *plecak) {
         for (int i = 0; i < plecak->count; i++) {
             Przedmiot *item = &plecak->items[i];
+            // Sprawdzenie typu i rzadkości przedmiotu
             if (item->typ == PRZEDMIOT_INNY && item->rzadkosc == RZAD_LEG && strstr(item->nazwa, "Amulet Regeneracji")) {
                 return 1;
             }
@@ -231,7 +242,9 @@
         return 0;
     }
 
+    // Funkcja wskaźnikowa - dodaje przedmiot do plecaka przez wskaźnik
     int dodaj_do_plecaka(Plecak *plecak, Przedmiot item, Postac* gracz) {
+        // Sprawdzenie limitu mikstur leczenia
         if (item.typ == PRZEDMIOT_LECZENIE) {
             int licznik = 0;
             for (int i = 0; i < plecak->count; i++)
@@ -241,12 +254,15 @@
                 return 0;
             }
         }
+        // Sprawdzenie czy jest miejsce w plecaku
         if (plecak->zajete_miejsce + item.waga > plecak->max_miejsce) {
             printf(KOLOR_RED "Plecak nie ma miejsca! (waga: %d/%d)\n" KOLOR_RESET, plecak->zajete_miejsce, plecak->max_miejsce);
             return 0;
         }
+        // Dynamiczne powiększanie tablicy jeśli potrzeba
         if (plecak->count >= plecak->capacity) powieksz_plecak(plecak);
 
+        // Dodanie przedmiotu na początek jeśli to mikstura, w przeciwnym razie na koniec
         if (item.typ == PRZEDMIOT_LECZENIE) {
             for (int i = plecak->count; i > 0; i--) {
                 plecak->items[i] = plecak->items[i-1];
@@ -257,6 +273,7 @@
         }
         plecak->count++;
         plecak->zajete_miejsce += item.waga;
+        // Komunikaty o zdobyciu przedmiotu
         if (item.rzadkosc == RZAD_LEG)
             printf(KOLOR_BOLD KOLOR_YELLOW "LEGENDARNY przedmiot '%s' dodany do plecaka! (waga: %d/%d)\n" KOLOR_RESET, item.nazwa, plecak->zajete_miejsce, plecak->max_miejsce);
         else if (item.typ == PRZEDMIOT_LECZENIE)
@@ -266,14 +283,17 @@
         return 1;
     }
 
+    // Funkcja wskaźnikowa - usuwa przedmiot z plecaka przez wskaźnik
     void usun_z_plecaka(Plecak *plecak, int idx) {
         if (idx < 0 || idx >= plecak->count) return;
         plecak->zajete_miejsce -= plecak->items[idx].waga;
+        // Przesuwanie elementów tablicy po usunięciu
         for (int i = idx; i < plecak->count - 1; i++)
             plecak->items[i] = plecak->items[i + 1];
         plecak->count--;
     }
 
+    // Funkcja wskaźnikowa - generuje przedmiot na podstawie wskaźnika na gracza
     Przedmiot generuj_przedmiot(Postac* gracz) {
         Przedmiot item;
         int roll_typ = rand() % 100;
@@ -407,6 +427,7 @@
         return item;
     }
 
+    // Funkcja wskaźnikowa - stosuje bonusy z przedmiotu do postaci przez wskaźnik
     /* --- BONUSY --- */
     void zastosuj_bonusy(Postac* postac, Przedmiot *item) {
         postac->bonus_HP += item->bonus_HP;
@@ -415,6 +436,7 @@
         postac->bonus_szybkosc += item->bonus_szybkosc;
     }
 
+    // Funkcja wskaźnikowa - usuwa bonusy z przedmiotu z postaci przez wskaźnik
     void usun_bonusy(Postac* postac, Przedmiot *item) {
         postac->bonus_HP -= item->bonus_HP;
         postac->bonus_sila -= item->bonus_sila;
@@ -447,6 +469,7 @@
         printf("Szybkosc: %.2f -> %.2f\n", szybkosc0, szybkosc1);
     }
 
+    // Funkcja wskaźnikowa - wyposaża przedmiot z plecaka do slotu przez wskaźnik
     void wyposaz_przedmiot(Postac *gracz, Plecak *plecak, int indeks) {
         if (indeks < 0 || indeks >= plecak->count) {
             printf("Nieprawidlowy indeks.\n");
@@ -491,6 +514,7 @@
         }
     }
 
+    // Funkcja wskaźnikowa - używa leczenia przez wskaźnik
     void uzyj_leczenie(Postac *gracz, Plecak *plecak, int idx) {
         if (idx < 0 || idx >= plecak->count) return;
         Przedmiot *item = &plecak->items[idx];
@@ -524,6 +548,7 @@
 
     void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest);
 
+    // Funkcja wskaźnikowa - przegląda plecak przez wskaźnik
     /* --- PLECAK I SLOTY - INTERFEJS --- */
     void przegladaj_plecak(Plecak *plecak, Postac *gracz, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
         while (1) {
@@ -622,6 +647,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         }
     }
 
+    // Funkcja wskaźnikowa - generuje mapę przez wskaźnik
     /* --- GENEROWANIE MAPY --- */
     void generuj_mape(Mapa* mapa, TypLokacji typ_lokacji) {
         switch (typ_lokacji) {
@@ -717,6 +743,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         }
     }
 
+    // Funkcja wskaźnikowa - rysuje legendę mapy przez wskaźnik
     /* --- MAPA I RYSOWANIE --- */
     void rysuj_legenda(Mapa* mapa, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
         printf(KOLOR_BOLD KOLOR_MAGENTA "LEGENDA MAPY:\n" KOLOR_RESET);
@@ -734,6 +761,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         printf("---------------------------------\n\n");
     }
 
+    // Funkcja wskaźnikowa - rysuje mapę przez wskaźnik
     void rysuj_mape(Mapa* mapa, int graczX, int graczY, TypLokacji typ_lokacji, NPCQuest *npc_quest) {
         printf("   +");
         for (int x = 0; x < mapa->szerokosc; x++) printf("--");
@@ -776,6 +804,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         printf("+\n");
     }
 
+    // Funkcja wskaźnikowa - sprawdza przechodność mapy przez wskaźnik
     /* --- BFS --- */  //sprawdza czy mape da sie przejsc
     int is_map_traversable(Mapa* mapa, int startX, int startY) {
         int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
@@ -802,6 +831,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         return 0;
     }
 
+    // Funkcja wskaźnikowa - sprawdza dostępność skarbu przez wskaźnik
     int is_skarb_dostepny(Mapa* mapa, int startX, int startY) {
         int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
         Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
@@ -828,6 +858,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         return 0;
     }
 
+    // Funkcja wskaźnikowa - generuje przechodnią mapę przez wskaźnik
     void generuj_przechodna_mape(Mapa* mapa, TypLokacji* typ_lokacji) {
         *typ_lokacji = rand() % 6;
         do {
@@ -836,6 +867,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         } while (!is_map_traversable(mapa, 1, 1) || !is_skarb_dostepny(mapa, 1, 1));
     }
 
+    // Funkcja wskaźnikowa - sprawdza dostępność NPC przez wskaźnik
     int czy_npc_dostepny(Mapa* mapa, int startX, int startY, int npcX, int npcY) {
         int visited[MAX_WYSOKOSC][MAX_SZEROKOSC] = {{0}};
         Pozycja queue[MAX_WYSOKOSC * MAX_SZEROKOSC];
@@ -861,6 +893,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         return 0;
     }
 
+    // Funkcja wskaźnikowa - losuje pozycję NPC przez wskaźnik
     void losuj_pozycje_npc(Mapa* mapa, NPCQuest* npc_quest) {
         int x, y;
         do {
@@ -874,6 +907,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         npc_quest->aktywny = 1;
     }
 
+    // Funkcja wskaźnikowa - generuje questa przez wskaźnik
     // --- Funkcja do generowania questa ---
     void generuj_questa(Quest *quest, Postac *gracz) {
         TypQuestu poprzedni = quest->typ;
@@ -896,6 +930,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         quest->start_pulapek = gracz->liczba_pulapek;
     }
 
+    // Funkcja wskaźnikowa - dialog z NPC przez wskaźnik
     // --- Dialog z NPC ---
     void dialog_npc(Postac *gracz, Quest *quest, Plecak *plecak) {
         while (1) {
@@ -972,6 +1007,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         }
     }
 
+    // Funkcja wskaźnikowa - sklep przez wskaźnik
     /* --- KUPIEC --- */
     void sklep(Postac *gracz, Plecak *plecak) {
         while (1) {
@@ -1080,6 +1116,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         }
     }
 
+    // Funkcja wskaźnikowa - porusza gracza przez wskaźnik
     /* --- PORUSZANIE --- */
     void porusz_gracza(Mapa* mapa, int* graczX, int* graczY, TypLokacji typ_lokacji, Postac *gracz, Plecak *plecak) {
         char ruch;
@@ -1128,6 +1165,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
 
     void pokaz_podsumowanie(Postac* gracz);
 
+    // Funkcja wskaźnikowa - walka przez wskaźnik
     void walka(Postac* gracz, Postac* przeciwnik, Plecak *plecak) {
         printf(KOLOR_BOLD KOLOR_RED "Napotykasz przeciwnika! Walka rozpoczeta!\n" KOLOR_RESET);
 
@@ -1239,6 +1277,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         getchar(); getchar();
     }
 
+    // Funkcja wskaźnikowa - level up przez wskaźnik
     /* --- LEVEL UP --- */
     void level_up(Postac* gracz) {
         printf(KOLOR_BOLD KOLOR_GREEN "\nLEVEL UP! Osiagnales poziom %d!\n" KOLOR_RESET, gracz->poziom);
@@ -1270,6 +1309,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         gracz->xp_do_lvlu += LEVELUP_XP * gracz->poziom; // Zwiększenie wymagania XP do kolejnego poziomu
     }
 
+    // Funkcja wskaźnikowa - generuje postać przez wskaźnik
     /* --- GENEROWANIE POSTACI --- */
     Postac generuj_postac() {
         Postac p;
@@ -1301,6 +1341,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         return p;
     }
 
+    // Funkcja wskaźnikowa - generuje przeciwnika przez wskaźnik
     Postac generuj_przeciwnika(Postac *gracz) {
         Postac enemy = generuj_postac();
         int poziom = gracz->poziom;
@@ -1334,6 +1375,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         return enemy;
     }
 
+    // Funkcja wskaźnikowa - wyświetla informacje przez wskaźnik
     /* --- INFO --- */
     void wyswietl_informacje(Postac* gracz) {
         printf(KOLOR_BOLD KOLOR_CYAN "╔══════════════════════════════════════════════════╗\n" KOLOR_RESET);
@@ -1387,7 +1429,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         printf(KOLOR_BOLD KOLOR_CYAN "--------------------------------------------------\n" KOLOR_RESET);
     }
 
-
+    // Funkcja wskaźnikowa - podsumowanie przez wskaźnik
     void pokaz_podsumowanie(Postac* gracz) {
         printf(KOLOR_BOLD KOLOR_RED "\n=== KONIEC GRY ===\n" KOLOR_RESET);
         printf("Poziom: %d\n", gracz->poziom);
@@ -1399,6 +1441,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
         printf("Dziekujemy za gre!\n");
     }
 
+    // Funkcja wskaźnikowa - zapisuje grę przez wskaźnik
     void zapisz_gre(Postac* gracz, Plecak* plecak, TypLokacji typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
     char filename[64];
     snprintf(filename, sizeof(filename), "save_%s.sav", gracz->nazwa);
@@ -1469,6 +1512,7 @@ printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); 
     printf("Gra zostala zapisana do pliku %s\n", filename);
 }
 
+// Funkcja wskaźnikowa - wczytuje grę przez wskaźnik
 int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* mapa, NPCQuest* npc_quest) {
     char filename[64];
     printf("Podaj imie/nazwe postaci do wczytania: ");
@@ -1666,6 +1710,7 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
     return 1;
 }
 
+// Funkcja wskaźnikowa - porusza wrogów przez wskaźnik
     void porusz_wrogow(Mapa* mapa, int graczX, int graczY) {
         int dx[] = {0, 1, 0, -1};
         int dy[] = {-1, 0, 1, 0};
@@ -1737,6 +1782,7 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
                 mapa->komorki[y][x].typ = (TypKomorki)nowe_typy[y][x];
     }
 
+    // --- Funkcja sprawdzająca czy gracz stoi obok przeciwnika ---
     int gracz_obok_przeciwnika(Mapa* mapa, int x, int y) {
         int dx[] = {0, 1, 0, -1};
         int dy[] = {-1, 0, 1, 0};
