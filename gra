@@ -573,7 +573,8 @@
                     printf(")" KOLOR_RESET "\n");
                 }
             }
-            printf("\nWybierz nr przedmiotu do wyposazenia/uzycia (q aby wyjsc, L <nr> aby uzyc leczenie, W <nr> aby wyrzucic, Z <slot> aby zdjac przedmiot ze slotu): "); //aby zjadc przedmiot to np Z 0 (od 0 do 2)
+            printf("\nWybierz nr przedmiotu do wyposazenia/uzycia (q aby wyjsc, L <nr> aby uzyc leczenie, W <nr> aby wyrzucic, Z <slot> aby zdjac przedmiot ze slotu).\n");
+printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz.\n" KOLOR_RESET); //aby zjadc przedmiot to np Z 0 (od 0 do 2)
             char linia[32];
             fgets(linia, sizeof(linia), stdin);
             int wybor;
@@ -1635,8 +1636,32 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
                 plecak->zajete_miejsce += temp.waga;
             }
         }
+      int wyposazono = 0;
+        for (int slot = 0; slot < SLOT_ILOSC; slot++) {
+            if (gracz->sloty[slot] == NULL) {
+                for (int i = 0; i < plecak->count; i++) {
+                    Przedmiot *item = &plecak->items[i];
+                    if ((slot == SLOT_BRON && item->typ == PRZEDMIOT_BRON) ||
+                        (slot == SLOT_TARCZA && item->typ == PRZEDMIOT_TARCZA) ||
+                        (slot == SLOT_ZBROJA && item->typ == PRZEDMIOT_ZBROJA)) {
+                        gracz->sloty[slot] = malloc(sizeof(Przedmiot));
+                        *(gracz->sloty[slot]) = *item;
+                        zastosuj_bonusy(gracz, item);
+                        // Usuń z plecaka
+                        for (int j = i; j < plecak->count - 1; j++)
+                            plecak->items[j] = plecak->items[j + 1];
+                        plecak->count--;
+                        plecak->zajete_miejsce -= item->waga;
+                        wyposazono = 1;
+                        break;
+                    }
+                }
+            }
+        }
+        if (wyposazono) {
+            printf(KOLOR_YELLOW "Wyposażone przedmioty zostały automatycznie założone na postać po wczytaniu gry.\n" KOLOR_RESET);
+        }
     }
-
     fclose(f);
     return 1;
 }
@@ -1762,6 +1787,8 @@ int wczytaj_gre(Postac* gracz, Plecak* plecak, TypLokacji* typ_lokacji, Mapa* ma
         gracz.nazwa[strcspn(gracz.nazwa, "\n")] = 0;
         init_plecak(&plecak, 40);
     }
+
+    printf(KOLOR_CYAN "Aby zapisać grę, wpisz ZAPISZ lub zapisz podczas przeglądania plecaka.\n" KOLOR_RESET);      // Informacja o zapisie
 
     Quest quest = (Quest){QUEST_BRAK, 0, 0, 0, 0};
 
